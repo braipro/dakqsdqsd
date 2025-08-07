@@ -1,129 +1,178 @@
+require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
 const cookie = require('cookie');
-const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const { URLSearchParams } = require('url');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Global variables to store session data
-let sessionCookies = {};
-let xsrfToken = '';
+// Configuration
+const DHD_LOGIN_URL = 'https://platform.dhd-dz.com/login';
+const DHD_EXPORT_URL = 'https://platform.dhd-dz.com/export';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36';
 
-// Login route
+// Session storage
+let sessionData = {
+  cookies: {},
+  xsrfToken: '',
+  lastActivity: null
+};
+
+// Enhanced Axios instance
+const http = axios.create({
+  timeout: 10000,
+  headers: {
+    'User-Agent': USER_AGENT,
+    'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+  },
+  withCredentials: true
+});
+
+// Helper: Extract cookies from response
+const extractCookies = (response) => {
+  const cookies = {};
+  response.headers['set-cookie'].forEach(cookieStr => {
+    const parsed = cookie.parse(cookieStr.split(';')[0]);
+    Object.assign(cookies, parsed);
+  });
+  return cookies;
+};
+
+// Login Route - Updated with CSRF handling
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+  try {
+    // 1. Get initial CSRF token
+    const { data: loginPage, headers } = await http.get(DHD_LOGIN_URL);
+    const $ = cheerio.load(loginPage);
+    const csrfToken = $('input[name="_token"]').val();
 
-    try {
-        // First request to get CSRF token
-        const loginPage = await axios.get('https://platform.dhd-dz.com/login');
-        const $ = cheerio.load(loginPage.data);
-        const token = $('input[name="_token"]').val();
-
-        // Prepare login data
-        const loginData = new URLSearchParams();
-        loginData.append('_token', token);
-        loginData.append('email', email);
-        loginData.append('password', password);
-        loginData.append('g-recaptcha-response', 'bypassed');
-
-        // Perform login
-        const loginResponse = await axios.post('https://platform.dhd-dz.com/login', loginData.toString(), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': 'https://platform.dhd-dz.com/login'
-            },
-            maxRedirects: 0,
-            validateStatus: (status) => status === 302
-        });
-
-        // Extract cookies from response
-        const setCookieHeaders = loginResponse.headers['set-cookie'];
-        if (!setCookieHeaders) {
-            return res.status(401).json({ message: 'Échec de la connexion - cookies non reçus' });
-        }
-
-        // Parse cookies
-        const cookies = {};
-        setCookieHeaders.forEach(cookieStr => {
-            const parsed = cookie.parse(cookieStr.split(';')[0]);
-            Object.assign(cookies, parsed);
-        });
-
-        // Store cookies for future requests
-        sessionCookies = cookies;
-        xsrfToken = cookies['XSRF-TOKEN'];
-
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Erreur de connexion' });
+    if (!csrfToken) {
+      throw new Error('CSRF token not found');
     }
+
+    // 2. Prepare login data
+    const params = new URLSearchParams();
+    params.append('_token', csrfToken);
+    params.append('email', req.body.email);
+    params.append('password', req.body.password);
+    params.append('g-recaptcha-response', 'bypass'); // Bypass CAPTCHA
+
+    // 3. Send login request
+    const loginResponse = await http.post(DHD_LOGIN_URL, params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Referer': DHD_LOGIN_URL,
+        'Origin': 'https://platform.dhd-dz.com'
+      },
+      maxRedirects: 0,
+      validateStatus: (status) => status === 302
+    });
+
+    // 4. Verify successful login
+    if (!loginResponse.headers.location.includes('home')) {
+      throw new Error('Login failed - invalid redirect');
+    }
+
+    // 5. Store session data
+    sessionData = {
+      cookies: extractCookies(loginResponse),
+      xsrfToken: csrfToken,
+      lastActivity: new Date()
+    };
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Login error:', error.message);
+    res.status(401).json({ 
+      message: 'Échec de la connexion',
+      details: error.response?.data || error.message
+    });
+  }
 });
 
-// Export data route
+// Export Data Route - With retry logic
 app.get('/export-data', async (req, res) => {
-    const { start, end } = req.query;
-
-    try {
-        // First, get the export page to get a new CSRF token
-        const exportPage = await axios.get('https://platform.dhd-dz.com/export', {
-            headers: {
-                'Cookie': `XSRF-TOKEN=${xsrfToken}; ecotrack_session=${sessionCookies['ecotrack_session']}`
-            }
-        });
-
-        const $ = cheerio.load(exportPage.data);
-        const token = $('input[name="_token"]').val();
-
-        // Prepare export data
-        const exportData = new URLSearchParams();
-        exportData.append('_token', token);
-        exportData.append('current_state', '3'); // Expédiés
-        exportData.append('date_start', start);
-        exportData.append('date_end', end);
-        exportData.append('operation', '1'); // Livraison
-
-        // Request the export
-        const exportResponse = await axios.post('https://platform.dhd-dz.com/export', exportData.toString(), {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Cookie': `XSRF-TOKEN=${xsrfToken}; ecotrack_session=${sessionCookies['ecotrack_session']}`,
-                'Referer': 'https://platform.dhd-dz.com/export'
-            },
-            responseType: 'arraybuffer'
-        });
-
-        // Parse the Excel file
-        const workbook = xlsx.read(exportResponse.data, { type: 'buffer' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = xlsx.utils.sheet_to_json(firstSheet, { header: 1 });
-
-        res.json(jsonData);
-
-    } catch (error) {
-        console.error('Export error:', error);
-        res.status(500).json({ message: 'Erreur lors de l\'export des données' });
+  try {
+    if (!sessionData.cookies.XSRF_TOKEN) {
+      throw new Error('Session expired - please login again');
     }
+
+    // 1. Get fresh CSRF token
+    const exportPage = await http.get(DHD_EXPORT_URL, {
+      headers: {
+        'Cookie': `XSRF-TOKEN=${sessionData.cookies.XSRF_TOKEN}; ecotrack_session=${sessionData.cookies.ecotrack_session}`
+      }
+    });
+
+    const $ = cheerio.load(exportPage.data);
+    const csrfToken = $('input[name="_token"]').val();
+
+    // 2. Prepare export request
+    const params = new URLSearchParams();
+    params.append('_token', csrfToken);
+    params.append('current_state', '3'); // Expédiés
+    params.append('date_start', req.query.start);
+    params.append('date_end', req.query.end);
+    params.append('operation', '1'); // Livraison
+
+    // 3. Download Excel file
+    const exportResponse = await http.post(DHD_EXPORT_URL, params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': `XSRF-TOKEN=${sessionData.cookies.XSRF_TOKEN}; ecotrack_session=${sessionData.cookies.ecotrack_session}`,
+        'Referer': DHD_EXPORT_URL
+      },
+      responseType: 'arraybuffer'
+    });
+
+    // 4. Parse Excel data
+    const workbook = xlsx.read(exportResponse.data);
+    const jsonData = xlsx.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+
+    res.json(jsonData);
+
+  } catch (error) {
+    console.error('Export error:', error.message);
+    
+    // Auto-retry once if session expired
+    if (error.message.includes('Session expired') && req.query.retry !== 'false') {
+      console.log('Attempting auto-relogin...');
+      await axios.post(`http://localhost:${PORT}/login`, {
+        email: process.env.DHD_EMAIL,
+        password: process.env.DHD_PASSWORD
+      });
+      return res.redirect(`/export-data?start=${req.query.start}&end=${req.query.end}&retry=false`);
+    }
+
+    res.status(500).json({ 
+      message: 'Erreur lors de l\'export',
+      error: error.message
+    });
+  }
 });
 
-// Serve the index.html file
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Serve frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  res.status(500).send('Erreur interne du serveur');
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
