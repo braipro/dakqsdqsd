@@ -2,156 +2,128 @@ const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
-const path = require('path');
 
-// Configuration
+// تكوين السيرفر
 const config = {
-  rtmpEndpoint: 'rtmps://dc4-1.rtmp.t.me/s/2731950212:Io2iCI22_YBU-uXdmRdReQ',
+  rtmpServer: 'rtmps://dc4-1.rtmp.t.me/s/',
+  streamKey: '2731950212:Io2iCI22_YBU-uXdmRdReQ',
   telegramToken: '8177861125:AAEwyzuzOkkZqxwnzSGU8YKpy_OO0_A1GgQ',
   adminId: 7345253225,
   tempDir: './temp'
 };
 
-// Create temp directory if it doesn't exist
+// إنشاء مجلد مؤقت إذا لم يكن موجودًا
 if (!fs.existsSync(config.tempDir)) {
   fs.mkdirSync(config.tempDir);
 }
 
-// Initialize Express app
 const app = express();
 const port = process.env.PORT || 3000;
-
-// Initialize Telegram Bot
 const bot = new TelegramBot(config.telegramToken, {polling: true});
 
-// State management
+// حالة البث الحالي
 let currentStream = null;
 let currentVideoUrl = null;
 
-// Telegram bot commands
+// أوامر التليجرام
 bot.onText(/\/start/, (msg) => {
-  const chatId = msg.chat.id;
-  if (chatId != config.adminId) {
-    return bot.sendMessage(chatId, 'Unauthorized access.');
-  }
+  if (msg.chat.id != config.adminId) return;
   
-  bot.sendMessage(chatId, 'Welcome to the RTMP Streamer Bot!\n\nAvailable commands:\n/startlive - Start the live stream\n/setvid [url] - Set the video URL\n/stoplive - Stop the current stream\n/status - Check current stream status');
+  bot.sendMessage(msg.chat.id, `
+🎥 نظام التحكم في البث المباشر
+  
+الأوامر المتاحة:
+/startlive - بدء البث المباشر
+/setvid [رابط] - تعيين رابط الفيديو
+/stoplive - إيقاف البث الحالي
+/status - عرض حالة البث
+  `);
 });
 
-bot.onText(/\/startlive/, (msg) => {
-  const chatId = msg.chat.id;
-  if (chatId != config.adminId) {
-    return bot.sendMessage(chatId, 'Unauthorized access.');
-  }
+bot.onText(/\/startlive/, async (msg) => {
+  if (msg.chat.id != config.adminId) return;
   
   if (!currentVideoUrl) {
-    return bot.sendMessage(chatId, 'No video URL set. Please use /setvid first.');
+    return bot.sendMessage(msg.chat.id, '⚠️ لم يتم تعيين رابط فيديو! استخدم /setvid أولاً');
   }
   
   if (currentStream) {
-    return bot.sendMessage(chatId, 'A stream is already running. Use /stoplive first.');
+    return bot.sendMessage(msg.chat.id, '⚠️ يوجد بث نشط بالفعل! استخدم /stoplive أولاً');
   }
-  
-  startStream(chatId);
-});
-
-bot.onText(/\/setvid (.+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  if (chatId != config.adminId) {
-    return bot.sendMessage(chatId, 'Unauthorized access.');
-  }
-  
-  const videoUrl = match[1];
-  currentVideoUrl = videoUrl;
-  bot.sendMessage(chatId, `Video URL set to: ${videoUrl}`);
-});
-
-bot.onText(/\/stoplive/, (msg) => {
-  const chatId = msg.chat.id;
-  if (chatId != config.adminId) {
-    return bot.sendMessage(chatId, 'Unauthorized access.');
-  }
-  
-  if (!currentStream) {
-    return bot.sendMessage(chatId, 'No active stream to stop.');
-  }
-  
-  stopStream(chatId);
-});
-
-bot.onText(/\/status/, (msg) => {
-  const chatId = msg.chat.id;
-  if (chatId != config.adminId) {
-    return bot.sendMessage(chatId, 'Unauthorized access.');
-  }
-  
-  const status = currentStream 
-    ? `Stream is active\nVideo: ${currentVideoUrl}` 
-    : 'No active stream';
-  
-  bot.sendMessage(chatId, status);
-});
-
-// Stream management functions
-function startStream(chatId) {
-  bot.sendMessage(chatId, 'Starting stream...');
   
   try {
+    bot.sendMessage(msg.chat.id, '⏳ جاري بدء البث...');
+    
+    const rtmpUrl = `${config.rtmpServer}${config.streamKey}`;
+    
     currentStream = ffmpeg(currentVideoUrl)
-      .inputFormat('mp4')
+      .inputOptions([
+        '-re',
+        '-stream_loop -1'
+      ])
       .videoCodec('libx264')
       .audioCodec('aac')
       .format('flv')
-      .output(config.rtmpEndpoint)
-      .on('start', (commandLine) => {
-        console.log('Spawned FFmpeg with command: ' + commandLine);
-        bot.sendMessage(chatId, `Stream started with video: ${currentVideoUrl}`);
+      .output(rtmpUrl)
+      .on('start', (cmd) => {
+        console.log('بدأ البث: ' + cmd);
+        bot.sendMessage(msg.chat.id, `✅ بدأ البث بنجاح!\nرابط الفيديو: ${currentVideoUrl}`);
       })
-      .on('error', (err, stdout, stderr) => {
-        console.error('Error:', err);
-        console.error('FFmpeg stderr:', stderr);
-        bot.sendMessage(chatId, `Stream error: ${err.message}`);
+      .on('error', (err) => {
+        console.error('خطأ في البث:', err);
+        bot.sendMessage(msg.chat.id, `❌ خطأ في البث: ${err.message}`);
         currentStream = null;
       })
       .on('end', () => {
-        console.log('Stream finished');
-        bot.sendMessage(chatId, 'Stream finished');
+        bot.sendMessage(msg.chat.id, '⏹️ توقف البث');
         currentStream = null;
       })
       .run();
+      
   } catch (err) {
-    console.error('Stream setup error:', err);
-    bot.sendMessage(chatId, `Failed to start stream: ${err.message}`);
+    bot.sendMessage(msg.chat.id, `❌ فشل بدء البث: ${err.message}`);
     currentStream = null;
   }
-}
+});
 
-function stopStream(chatId) {
-  if (currentStream) {
-    currentStream.kill('SIGINT');
-    currentStream = null;
-    bot.sendMessage(chatId, 'Stream stopped successfully.');
+bot.onText(/\/setvid (.+)/, (msg, match) => {
+  if (msg.chat.id != config.adminId) return;
+  
+  currentVideoUrl = match[1];
+  bot.sendMessage(msg.chat.id, `✅ تم تعيين رابط الفيديو:\n${currentVideoUrl}`);
+});
+
+bot.onText(/\/stoplive/, (msg) => {
+  if (msg.chat.id != config.adminId) return;
+  
+  if (!currentStream) {
+    return bot.sendMessage(msg.chat.id, '⚠️ لا يوجد بث نشط حالياً');
   }
-}
+  
+  currentStream.kill('SIGINT');
+  currentStream = null;
+  bot.sendMessage(msg.chat.id, '✅ تم إيقاف البث بنجاح');
+});
 
-// Health check endpoint
+bot.onText(/\/status/, (msg) => {
+  if (msg.chat.id != config.adminId) return;
+  
+  const status = currentStream 
+    ? `🟢 بث نشط\nرابط الفيديو: ${currentVideoUrl}`
+    : '🔴 لا يوجد بث نشط';
+  
+  bot.sendMessage(msg.chat.id, status);
+});
+
+// نقطة نهاية للتحقق من صحة السيرفر
 app.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'online',
-    streaming: currentStream !== null,
-    video: currentVideoUrl
+  res.json({
+    status: 'يعمل',
+    streaming: currentStream ? true : false,
+    video: currentVideoUrl || 'لم يتم التعيين'
   });
 });
 
-// Start the server
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-// Cleanup on exit
-process.on('SIGINT', () => {
-  if (currentStream) {
-    currentStream.kill('SIGINT');
-  }
-  process.exit();
+  console.log(`✅ السيرفر يعمل على المنفذ ${port}`);
 });
