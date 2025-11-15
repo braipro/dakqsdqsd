@@ -2,14 +2,16 @@
 
 import express from 'express';
 import session from 'express-session';
-import multer from 'multer';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
-import { HttpsProxyAgent } from 'https-proxy-agent';
+
+// استيراد HttpsProxyAgent بشكل متوافق مع ES modules
+import HttpsProxyAgentPackage from 'https-proxy-agent';
+const { HttpsProxyAgent } = HttpsProxyAgentPackage;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,16 +90,8 @@ class WhatsAppChecker {
             timeout: 30000,
             headers: {
                 'Accept': 'application/json, text/plain, */*',
-                'Accept-Encoding': 'gzip, deflate, br, zstd',
+                'Accept-Encoding': 'gzip, deflate, br',
                 'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
-                'Priority': 'u=1, i',
-                'Referer': 'https://umnico.com/tools/whatsapp-checker/',
-                'Sec-Ch-Ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
-                'Sec-Ch-Ua-Mobile': '?0',
-                'Sec-Ch-Ua-Platform': '"Windows"',
-                'Sec-Fetch-Dest': 'empty',
-                'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Site': 'same-origin',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
             }
         };
@@ -159,6 +153,7 @@ class WhatsAppChecker {
     async startChecking(onProgress, onComplete) {
         this.isRunning = true;
         this.stats = { checked: 0, withWhatsApp: 0, withoutWhatsApp: 0, errors: 0 };
+        this.results = [];
         
         for (const number of this.numbers) {
             if (!this.isRunning) break;
@@ -319,7 +314,7 @@ app.post('/check', requireAuth, async (req, res) => {
         // بدء التحقق في الخلفية
         checker.startChecking(
             (progress) => {
-                // إرسال التحديثات عبر SSE أو WebSocket (سيتم تنفيذها لاحقاً)
+                // سيتم إرسال التحديثات عبر polling
             },
             (results) => {
                 // حفظ النتائج في الجلسة
@@ -333,7 +328,7 @@ app.post('/check', requireAuth, async (req, res) => {
 });
 
 app.get('/results', requireAuth, (req, res) => {
-    if (!req.session.checker || !req.session.checker.results) {
+    if (!req.session.checker || !req.session.checker.results || req.session.checker.results.length === 0) {
         return res.status(404).json({ error: 'لا توجد نتائج متاحة' });
     }
     
@@ -361,6 +356,11 @@ app.post('/stop', requireAuth, (req, res) => {
         req.session.checker.stopChecking();
     }
     res.json({ success: true });
+});
+
+// مسار الصحة للخادم
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
