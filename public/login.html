@@ -83,6 +83,16 @@
             margin-bottom: 2rem;
         }
 
+        .session-info {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
         .form-group {
             margin-bottom: 1.5rem;
             text-align: left;
@@ -136,7 +146,6 @@
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
         }
 
         .alert {
@@ -151,6 +160,12 @@
             background: #fee2e2;
             color: #991b1b;
             border: 1px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
         }
 
         .support-section {
@@ -173,6 +188,31 @@
 
         .support-address:hover {
             background: #f1f5f9;
+        }
+
+        .contact-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        .contact-link {
+            background: var(--primary);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .contact-link:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
         }
 
         .loading {
@@ -199,6 +239,10 @@
         
         <h1>Welcome Back</h1>
         <p class="subtitle">Enter your password to access the dashboard</p>
+
+        <div class="session-info">
+            ⏰ Note: Sessions expire after 1 hour for security
+        </div>
         
         <div class="alert alert-error" id="errorAlert"></div>
         
@@ -221,8 +265,18 @@
             <div class="support-address" id="supportAddress">
                 TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
             </div>
-            <p style="color: var(--text-light); font-size: 0.75rem;">
-                USDT TRC20 - Your support matters! ❤️
+            
+            <div class="contact-links">
+                <a href="https://wa.me/19177281677" class="contact-link" target="_blank">
+                    <span>📞 WhatsApp</span>
+                </a>
+                <a href="https://t.me/MrAnadom" class="contact-link" target="_blank">
+                    <span>📱 Telegram</span>
+                </a>
+            </div>
+
+            <p style="color: var(--text-light); font-size: 0.75rem; margin-top: 1rem;">
+                Contact us for private version purchase!
             </p>
         </div>
     </div>
@@ -235,7 +289,6 @@
             const errorAlert = document.getElementById('errorAlert');
             const loginBtn = document.getElementById('loginBtn');
             
-            // Update button state
             loginBtn.innerHTML = '<span class="loading"></span> Authenticating...';
             loginBtn.disabled = true;
             
@@ -257,6 +310,15 @@
                     errorAlert.style.display = 'block';
                     loginBtn.innerHTML = '<span>🔐 Login to Dashboard</span>';
                     loginBtn.disabled = false;
+
+                    // If it's a capacity error, show WhatsApp link
+                    if (data.message.includes('capacity')) {
+                        errorAlert.innerHTML = data.message + 
+                            '<br><br><a href="https://wa.me/19177281677" target="_blank" style="color: #065f46; text-decoration: underline;">Contact on WhatsApp for private version</a>';
+                        errorAlert.style.background = '#fef3c7';
+                        errorAlert.style.color = '#92400e';
+                        errorAlert.style.borderColor = '#fde68a';
+                    }
                 }
             } catch (error) {
                 errorAlert.textContent = 'Network error: Unable to connect to server';
@@ -288,53 +350,6 @@
             const errorAlert = document.getElementById('errorAlert');
             errorAlert.style.display = 'none';
         });
-
-                // تحسين معالجة الأخطاء في تسجيل الدخول
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const password = document.getElementById('password').value;
-            const errorAlert = document.getElementById('errorAlert');
-            const loginBtn = document.getElementById('loginBtn');
-            
-            // تحديث حالة الزر
-            loginBtn.innerHTML = '<span class="loading"></span> جاري المصادقة...';
-            loginBtn.disabled = true;
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ password })
-                });
-
-                // تحقق من نوع المحتوى
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('استجابة غير متوقعة من الخادم');
-                }
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    window.location.href = '/';
-                } else {
-                    errorAlert.textContent = data.message;
-                    errorAlert.style.display = 'block';
-                    loginBtn.innerHTML = '<span>🔐 تسجيل الدخول</span>';
-                    loginBtn.disabled = false;
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                errorAlert.textContent = 'خطأ في الشبكة: لا يمكن الاتصال بالخادم';
-                errorAlert.style.display = 'block';
-                loginBtn.innerHTML = '<span>🔐 تسجيل الدخول</span>';
-                loginBtn.disabled = false;
-            }
-        });
     </script>
 </body>
 </html>
-
