@@ -71,14 +71,14 @@
             }
         }
 
-        .input-section {
+        .upload-section {
             background: #f8f9fa;
             padding: 25px;
             border-radius: 10px;
             border: 2px dashed #dee2e6;
         }
 
-        .input-section h3 {
+        .upload-section h3 {
             color: #2c3e50;
             margin-bottom: 20px;
             display: flex;
@@ -86,24 +86,54 @@
             gap: 10px;
         }
 
-        .input-section h3 i {
-            color: #3498db;
+        .file-upload {
+            margin-bottom: 20px;
         }
 
-        textarea {
+        .file-upload label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
             width: 100%;
-            height: 200px;
-            padding: 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            resize: vertical;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
         }
 
-        textarea:focus {
-            outline: none;
-            border-color: #3498db;
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-input:hover {
+            background: #e3f2fd;
+            border-color: #2980b9;
+        }
+
+        .file-name {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #7f8c8d;
         }
 
         .options {
@@ -149,12 +179,17 @@
             flex: 1;
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .btn-primary {
             background: #3498db;
             color: white;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             background: #2980b9;
         }
 
@@ -163,7 +198,7 @@
             color: white;
         }
 
-        .btn-success:hover {
+        .btn-success:hover:not(:disabled) {
             background: #219a52;
         }
 
@@ -172,7 +207,7 @@
             color: white;
         }
 
-        .btn-danger:hover {
+        .btn-danger:hover:not(:disabled) {
             background: #c0392b;
         }
 
@@ -181,7 +216,7 @@
             color: white;
         }
 
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #7f8c8d;
         }
 
@@ -235,30 +270,6 @@
             margin-top: 5px;
         }
 
-        .results {
-            margin-top: 20px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .result-item {
-            padding: 10px;
-            margin: 5px 0;
-            background: white;
-            border-radius: 6px;
-            border-left: 4px solid #e74c3c;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-        }
-
-        .result-item.success {
-            border-left-color: #27ae60;
-        }
-
-        .result-item.error {
-            border-left-color: #e74c3c;
-        }
-
         .support-section {
             background: linear-gradient(135deg, #34495e, #2c3e50);
             color: white;
@@ -274,6 +285,7 @@
             font-family: 'Courier New', monospace;
             margin: 15px 0;
             word-break: break-all;
+            cursor: pointer;
         }
 
         .logout-section {
@@ -321,12 +333,30 @@
         </div>
 
         <div class="main-content">
-            <div class="input-section">
-                <h3>📞 الأرقام المراد التحقق منها</h3>
-                <textarea id="numbersInput" placeholder="أدخل الأرقام (رقم في كل سطر)&#10;مثال:&#10;1234567890&#10;0987654321&#10;سيتم تنظيف الأرقام تلقائياً من المسافات والرموز"></textarea>
+            <div class="upload-section">
+                <h3>📁 رفع الملفات</h3>
                 
-                <h3>🔗 بروكسيات التحقق</h3>
-                <textarea id="proxiesInput" placeholder="أدخل عناوين البروكسي (سطر لكل بروكسي)&#10;مثال:&#10;192.168.1.1:8080&#10;http://proxy.example.com:8080&#10;user:pass@proxy.com:3128"></textarea>
+                <div class="file-upload">
+                    <label>📞 ملف الأرقام (TXT)</label>
+                    <div class="file-input-wrapper">
+                        <div class="file-input" id="numbersInputLabel">
+                            انقر لرفع ملف الأرقام
+                        </div>
+                        <input type="file" id="numbersFile" accept=".txt">
+                    </div>
+                    <div class="file-name" id="numbersStatus">لم يتم رفع أي ملف</div>
+                </div>
+
+                <div class="file-upload">
+                    <label>🔗 ملف البروكسيات (TXT)</label>
+                    <div class="file-input-wrapper">
+                        <div class="file-input" id="proxiesInputLabel">
+                            انقر لرفع ملف البروكسيات
+                        </div>
+                        <input type="file" id="proxiesFile" accept=".txt">
+                    </div>
+                    <div class="file-name" id="proxiesStatus">لم يتم رفع أي ملف</div>
+                </div>
 
                 <div class="options">
                     <div class="option-group">
@@ -340,8 +370,8 @@
                 </div>
 
                 <div class="buttons">
-                    <button class="btn btn-primary" onclick="startChecking()">▶ بدء التحقق</button>
-                    <button class="btn btn-danger" onclick="stopChecking()">⏹ إيقاف</button>
+                    <button class="btn btn-primary" onclick="startChecking()" id="startBtn">▶ بدء التحقق</button>
+                    <button class="btn btn-danger" onclick="stopChecking()" id="stopBtn" disabled>⏹ إيقاف</button>
                     <button class="btn btn-success" onclick="downloadResults()" id="downloadBtn" disabled>📥 تحميل النتائج</button>
                 </div>
             </div>
@@ -372,10 +402,6 @@
                         <div class="stat-number" id="whatsappNo">0</div>
                         <div class="stat-label">غير موجود</div>
                     </div>
-                </div>
-
-                <div class="results" id="resultsContainer">
-                    <!-- سيتم عرض النتائج هنا -->
                 </div>
             </div>
         </div>
@@ -408,17 +434,59 @@
             }
         }
 
+        // معالجة رفع الملفات
+        document.getElementById('numbersFile').addEventListener('change', function(e) {
+            handleFileUpload(this, 'numbersStatus', '/upload-numbers');
+        });
+
+        document.getElementById('proxiesFile').addEventListener('change', function(e) {
+            handleFileUpload(this, 'proxiesStatus', '/upload-proxies');
+        });
+
+        async function handleFileUpload(input, statusId, endpoint) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusElement = document.getElementById(statusId);
+            statusElement.textContent = `جاري رفع: ${file.name}`;
+            statusElement.style.color = '#f39c12';
+
+            const formData = new FormData();
+            formData.append(input.id, file);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    statusElement.textContent = `✓ ${file.name}`;
+                    statusElement.style.color = '#27ae60';
+                    showAlert(data.message, 'success');
+                } else {
+                    statusElement.textContent = `✗ ${file.name} - فشل الرفع`;
+                    statusElement.style.color = '#e74c3c';
+                    showAlert(data.message, 'error');
+                    input.value = '';
+                }
+            } catch (error) {
+                statusElement.textContent = `✗ ${file.name} - خطأ في الاتصال`;
+                statusElement.style.color = '#e74c3c';
+                showAlert('خطأ في الاتصال بالخادم', 'error');
+                input.value = '';
+            }
+        }
+
         // بدء التحقق
         async function startChecking() {
-            const numbers = document.getElementById('numbersInput').value;
-            const proxies = document.getElementById('proxiesInput').value;
             const delay = document.getElementById('delayInput').value;
             const retries = document.getElementById('retriesInput').value;
 
-            if (!numbers.trim()) {
-                showAlert('يرجى إدخال الأرقام المراد التحقق منها', 'error');
-                return;
-            }
+            // تعطيل الأزرار أثناء التشغيل
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
 
             showAlert('جاري بدء عملية التحقق...', 'warning');
 
@@ -428,7 +496,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ numbers, proxies, delay, retries })
+                    body: JSON.stringify({ delay, retries })
                 });
 
                 const data = await response.json();
@@ -438,9 +506,13 @@
                     startProgressMonitoring();
                 } else {
                     showAlert(data.message, 'error');
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
                 }
             } catch (error) {
                 showAlert('خطأ في الاتصال بالخادم', 'error');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
             }
         }
 
@@ -457,17 +529,19 @@
                     if (!data.running) {
                         clearInterval(checkInterval);
                         document.getElementById('downloadBtn').disabled = false;
+                        document.getElementById('startBtn').disabled = false;
+                        document.getElementById('stopBtn').disabled = true;
                         showAlert('اكتملت عملية التحقق بنجاح!', 'success');
                     }
                 } catch (error) {
                     console.error('Error checking progress:', error);
                 }
-            }, 1000);
+            }, 2000);
         }
 
         // تحديث شريط التقدم
         function updateProgress(data) {
-            if (data.running) {
+            if (data.stats && data.total) {
                 const progress = (data.stats.checked / data.total) * 100;
                 document.getElementById('progressFill').style.width = progress + '%';
                 document.getElementById('progressText').textContent = progress.toFixed(1) + '%';
@@ -482,9 +556,17 @@
         // إيقاف التحقق
         async function stopChecking() {
             try {
-                await fetch('/stop', { method: 'POST' });
-                showAlert('تم إيقاف عملية التحقق', 'warning');
-                clearInterval(checkInterval);
+                const response = await fetch('/stop', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'warning');
+                    clearInterval(checkInterval);
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                } else {
+                    showAlert(data.message, 'error');
+                }
             } catch (error) {
                 showAlert('خطأ في إيقاف العملية', 'error');
             }
