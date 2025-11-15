@@ -288,6 +288,53 @@
             const errorAlert = document.getElementById('errorAlert');
             errorAlert.style.display = 'none';
         });
+
+                // تحسين معالجة الأخطاء في تسجيل الدخول
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            const errorAlert = document.getElementById('errorAlert');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // تحديث حالة الزر
+            loginBtn.innerHTML = '<span class="loading"></span> جاري المصادقة...';
+            loginBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                // تحقق من نوع المحتوى
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('استجابة غير متوقعة من الخادم');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorAlert.textContent = data.message;
+                    errorAlert.style.display = 'block';
+                    loginBtn.innerHTML = '<span>🔐 تسجيل الدخول</span>';
+                    loginBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorAlert.textContent = 'خطأ في الشبكة: لا يمكن الاتصال بالخادم';
+                errorAlert.style.display = 'block';
+                loginBtn.innerHTML = '<span>🔐 تسجيل الدخول</span>';
+                loginBtn.disabled = false;
+            }
+        });
     </script>
 </body>
 </html>
+
