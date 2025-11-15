@@ -9,6 +9,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import { UserAgent } from 'user-agents';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,20 +18,20 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - يجب أن يكون قبل الجلسات
+// Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
 
-// Session configuration - بعد middleware الأساسي
+// Session configuration - 1 hour only
 app.use(session({
     secret: 'AnaDom3301-secret-key-' + Math.random().toString(36),
     resave: false,
     saveUninitialized: false,
     cookie: { 
         secure: false,
-        maxAge: 24 * 60 * 60 * 1000,
+        maxAge: 60 * 60 * 1000, // 1 hour only
         httpOnly: true
     }
 }));
@@ -65,13 +67,15 @@ const upload = multer({
 const activeUsers = new Map();
 const MAX_USERS = 10;
 const PASSWORD = 'AnaDom3301';
+const WHATSAPP_CONTACT = 'https://wa.me/19177281677';
+const TELEGRAM_CONTACT = 'https://t.me/MrAnadom';
 
-// WhatsApp Checker Class
+// WhatsApp Checker Class (Enhanced with better proxy handling)
 class WhatsAppChecker {
     constructor(userId, options = {}) {
         this.userId = userId;
         this.options = {
-            delay: parseInt(options.delay) || 1000,
+            delay: parseInt(options.delay) || 2000,
             maxRetries: parseInt(options.retries) || 3,
             ...options
         };
@@ -88,6 +92,12 @@ class WhatsAppChecker {
             errors: 0
         };
         this.isRunning = false;
+        this.userAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        ];
     }
 
     cleanPhoneNumber(number) {
@@ -113,7 +123,12 @@ class WhatsAppChecker {
                     .split('\n')
                     .map(line => line.trim())
                     .filter(line => line && !line.startsWith('#'))
-                    .filter(line => line.includes(':') || line.startsWith('http'));
+                    .filter(line => {
+                        // Validate proxy format
+                        if (line.startsWith('http')) return true;
+                        const parts = line.split(':');
+                        return parts.length >= 2 && !isNaN(parts[1]);
+                    });
 
                 console.log(`User ${this.userId}: Loaded ${this.proxies.length} proxies`);
             } else {
@@ -128,6 +143,10 @@ class WhatsAppChecker {
         }
     }
 
+    getRandomUserAgent() {
+        return this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
+    }
+
     getNextProxy() {
         if (this.proxies.length === 0) return null;
         const proxy = this.proxies[this.currentProxyIndex];
@@ -135,57 +154,93 @@ class WhatsAppChecker {
         return proxy;
     }
 
-    createAxiosConfig(proxy) {
+    createAxiosInstance(proxy) {
         const config = {
-            timeout: 10000,
+            timeout: 15000,
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Cache-Control': 'no-cache',
+                'User-Agent': this.getRandomUserAgent(),
+                'Referer': 'https://web.whatsapp.com/',
+                'Origin': 'https://web.whatsapp.com',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin'
+            },
+            validateStatus: function (status) {
+                return status < 500;
             }
         };
 
         if (proxy) {
             try {
-                config.proxy = {
-                    protocol: 'http',
-                    host: proxy.split(':')[0],
-                    port: parseInt(proxy.split(':')[1]) || 8080
-                };
+                let proxyUrl = proxy;
+                if (!proxy.startsWith('http')) {
+                    proxyUrl = `http://${proxy}`;
+                }
+                config.httpsAgent = new HttpsProxyAgent(proxyUrl);
+                config.proxy = false;
             } catch (error) {
-                console.log(`Invalid proxy format: ${proxy}`);
+                console.log(`Invalid proxy format: ${proxy} - ${error.message}`);
             }
         }
 
-        return config;
+        return axios.create(config);
     }
 
     async checkNumber(phoneNumber, retryCount = 0) {
         const proxy = this.getNextProxy();
         
         try {
-            // استخدام خدمة خارجية للتحقق
-            const url = `https://web.whatsapp.com/check?phone=${phoneNumber}`;
-            const response = await axios.get(url, {
-                timeout: 10000,
-                validateStatus: function (status) {
-                    return status < 500; // تقبل جميع الحالات أقل من 500
+            const axiosInstance = this.createAxiosInstance(proxy);
+            
+            // Try multiple WhatsApp checking methods
+            const checkMethods = [
+                {
+                    url: `https://web.whatsapp.com/check?phone=${phoneNumber}`,
+                    validator: (data) => data && (data.exists === true || data.valid === true)
+                },
+                {
+                    url: `https://api.whatsapp.com/send?phone=${phoneNumber}`,
+                    validator: (data, response) => response.status === 200
+                },
+                {
+                    url: `https://wa.me/${phoneNumber}`,
+                    validator: (data, response) => response.status === 200
                 }
-            });
+            ];
 
-            // تحليل الاستجابة لتحديد إذا كان الرقم موجوداً في واتساب
-            const exists = response.status === 200 && 
-                          (response.data.exists === true || 
-                           response.data.valid === true ||
-                           response.data.status === 'valid');
+            for (const method of checkMethods) {
+                try {
+                    const response = await axiosInstance.get(method.url);
+                    
+                    if (method.validator(response.data, response)) {
+                        return {
+                            success: true,
+                            phone: phoneNumber,
+                            exists: true,
+                            proxy: proxy || 'direct',
+                            method: method.url
+                        };
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
 
+            // If all methods fail, consider number as not having WhatsApp
             return {
                 success: true,
                 phone: phoneNumber,
-                exists: exists,
+                exists: false,
                 proxy: proxy || 'direct'
             };
 
         } catch (error) {
             if (retryCount < this.options.maxRetries) {
+                console.log(`Retry ${retryCount + 1} for ${phoneNumber}`);
                 await this.delay(1000);
                 return this.checkNumber(phoneNumber, retryCount + 1);
             }
@@ -209,8 +264,13 @@ class WhatsAppChecker {
         this.results = [];
         this.whatsappNumbers = [];
         
+        console.log(`User ${this.userId}: Starting check for ${this.numbers.length} numbers`);
+        
         for (const number of this.numbers) {
-            if (!this.isRunning) break;
+            if (!this.isRunning) {
+                console.log(`User ${this.userId}: Checking stopped by user`);
+                break;
+            }
 
             try {
                 const result = await this.checkNumber(number);
@@ -220,10 +280,10 @@ class WhatsAppChecker {
                     if (result.exists) {
                         this.stats.withWhatsApp++;
                         this.whatsappNumbers.push(number);
-                        console.log(`User ${this.userId}: ${number} - HAS WhatsApp`);
+                        console.log(`User ${this.userId}: ${number} - HAS WhatsApp ✓`);
                     } else {
                         this.stats.withoutWhatsApp++;
-                        console.log(`User ${this.userId}: ${number} - NO WhatsApp`);
+                        console.log(`User ${this.userId}: ${number} - NO WhatsApp ✗`);
                     }
                 } else {
                     this.stats.errors++;
@@ -232,8 +292,8 @@ class WhatsAppChecker {
 
                 this.stats.checked++;
                 
-                // Save results periodically
-                if (this.stats.checked % 10 === 0) {
+                // Save results every 5 numbers
+                if (this.stats.checked % 5 === 0) {
                     await this.saveResults();
                 }
                 
@@ -249,12 +309,15 @@ class WhatsAppChecker {
                     error: error.message
                 });
                 this.stats.checked++;
+                console.log(`User ${this.userId}: ${number} - EXCEPTION: ${error.message}`);
             }
         }
 
         // Save final results
         await this.saveResults();
         this.isRunning = false;
+        
+        console.log(`User ${this.userId}: Checking completed - ${this.stats.withWhatsApp} numbers with WhatsApp`);
         return this.results;
     }
 
@@ -304,21 +367,18 @@ class WhatsAppChecker {
     }
 }
 
-// Authentication Middleware - محدث
+// Authentication Middleware
 function requireAuth(req, res, next) {
     if (req.session.authenticated && activeUsers.has(req.session.userId)) {
-        // تحديث وقت النشاط
         activeUsers.get(req.session.userId).lastActive = Date.now();
         next();
     } else {
-        // إذا كان طلب API، أرجع خطأ JSON
         if (req.path.startsWith('/api/')) {
             return res.status(401).json({ 
                 success: false, 
-                message: 'Authentication required' 
+                message: 'Authentication required. Please login again.' 
             });
         } else {
-            // إذا كان طلب صفحة، أعد التوجيه لل login
             return res.redirect('/login');
         }
     }
@@ -327,14 +387,14 @@ function requireAuth(req, res, next) {
 // Clean inactive users
 function cleanInactiveUsers() {
     const now = Date.now();
-    const inactiveTime = 10 * 60 * 1000; // 10 minutes
+    const inactiveTime = 60 * 60 * 1000; // 1 hour
     
     for (const [userId, userData] of activeUsers.entries()) {
         if (now - userData.lastActive > inactiveTime) {
             activeUsers.delete(userId);
-            // Clean user files
             const userDir = path.join(__dirname, 'uploads', userId);
             fs.rm(userDir, { recursive: true, force: true }).catch(() => {});
+            console.log(`Cleaned inactive user: ${userId}`);
         }
     }
 }
@@ -351,9 +411,7 @@ async function ensureUploadsDir() {
 // User session management
 const userSessions = new Map();
 
-// Routes - يجب أن تكون بعد تعريف جميع middleware
-
-// الصفحات
+// Routes
 app.get('/', (req, res) => {
     if (req.session.authenticated && activeUsers.has(req.session.userId)) {
         return res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
@@ -379,7 +437,7 @@ app.post('/api/login', (req, res) => {
         if (activeUsers.size >= MAX_USERS) {
             return res.status(429).json({ 
                 success: false, 
-                message: 'الخادم ممتلئ حالياً (10 مستخدمين). يرجى المحاولة لاحقاً' 
+                message: `Server is at full capacity (${MAX_USERS} users). Please try again later or contact us on WhatsApp to purchase your private version: ${WHATSAPP_CONTACT}` 
             });
         }
         
@@ -393,9 +451,11 @@ app.post('/api/login', (req, res) => {
             ip: req.ip
         });
         
+        console.log(`New user logged in: ${userId}, Total: ${activeUsers.size}`);
+        
         res.json({ success: true });
     } else {
-        res.status(401).json({ success: false, message: 'كلمة المرور غير صحيحة' });
+        res.status(401).json({ success: false, message: 'Invalid password' });
     }
 });
 
@@ -409,7 +469,6 @@ app.post('/api/logout', requireAuth, (req, res) => {
         userSessions.delete(userId);
     }
     
-    // Clean user files
     const userDir = path.join(__dirname, 'uploads', userId);
     fs.rm(userDir, { recursive: true, force: true }).catch(() => {});
     
@@ -422,7 +481,8 @@ app.get('/api/status', requireAuth, (req, res) => {
     res.json({
         activeUsers: activeUsers.size,
         maxUsers: MAX_USERS,
-        userStatus: 'active'
+        userStatus: 'active',
+        sessionTimeout: 60 // minutes
     });
 });
 
@@ -430,12 +490,11 @@ app.get('/api/status', requireAuth, (req, res) => {
 app.post('/api/upload/numbers', requireAuth, upload.single('numbersFile'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'لم يتم اختيار ملف' });
+            return res.status(400).json({ success: false, message: 'No file selected' });
         }
 
         req.session.numbersFile = req.file.path;
         
-        // حساب عدد الأرقام
         const content = await fs.readFile(req.file.path, 'utf8');
         const numbers = content.split('\n')
             .map(line => line.trim())
@@ -444,25 +503,24 @@ app.post('/api/upload/numbers', requireAuth, upload.single('numbersFile'), async
 
         res.json({ 
             success: true, 
-            message: 'تم رفع ملف الأرقام بنجاح',
+            message: 'Numbers file uploaded successfully',
             filename: req.file.originalname,
             count: numbers.length
         });
     } catch (error) {
         console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: 'خطأ في رفع الملف: ' + error.message });
+        res.status(500).json({ success: false, message: 'Upload failed: ' + error.message });
     }
 });
 
 app.post('/api/upload/proxies', requireAuth, upload.single('proxiesFile'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'لم يتم اختيار ملف' });
+            return res.status(400).json({ success: false, message: 'No file selected' });
         }
 
         req.session.proxiesFile = req.file.path;
         
-        // حساب عدد البروكسيات
         const content = await fs.readFile(req.file.path, 'utf8');
         const proxies = content.split('\n')
             .map(line => line.trim())
@@ -470,13 +528,13 @@ app.post('/api/upload/proxies', requireAuth, upload.single('proxiesFile'), async
 
         res.json({ 
             success: true, 
-            message: 'تم رفع ملف البروكسيات بنجاح',
+            message: 'Proxies file uploaded successfully',
             filename: req.file.originalname,
             count: proxies.length
         });
     } catch (error) {
         console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: 'خطأ في رفع الملف: ' + error.message });
+        res.status(500).json({ success: false, message: 'Upload failed: ' + error.message });
     }
 });
 
@@ -486,7 +544,7 @@ app.post('/api/check/start', requireAuth, async (req, res) => {
     const userId = req.session.userId;
     
     if (!req.session.numbersFile) {
-        return res.status(400).json({ success: false, message: 'يرجى رفع ملف الأرقام أولاً' });
+        return res.status(400).json({ success: false, message: 'Please upload numbers file first' });
     }
 
     try {
@@ -499,25 +557,27 @@ app.post('/api/check/start', requireAuth, async (req, res) => {
         );
 
         if (!filesLoaded || checker.numbers.length === 0) {
-            return res.status(400).json({ success: false, message: 'لم يتم العثور على أرقام صالحة في الملف' });
+            return res.status(400).json({ success: false, message: 'No valid numbers found in the file' });
         }
 
         res.json({ 
             success: true, 
-            message: `بدأ التحقق من ${checker.numbers.length} رقم`,
+            message: `Started checking ${checker.numbers.length} numbers`,
             totalNumbers: checker.numbers.length
         });
         
         // Start checking in background
-        checker.startChecking().then(() => {
+        checker.startChecking().then((results) => {
             console.log(`User ${userId} completed checking`);
+            // Set completion flag for Telegram redirect
+            req.session.checkingCompleted = true;
         }).catch(error => {
             console.error(`User ${userId} checking error:`, error);
         });
         
     } catch (error) {
         console.error('Check start error:', error);
-        res.status(500).json({ success: false, message: 'خطأ في بدء التحقق: ' + error.message });
+        res.status(500).json({ success: false, message: 'Failed to start checking: ' + error.message });
     }
 });
 
@@ -534,12 +594,21 @@ app.get('/api/check/progress', requireAuth, (req, res) => {
         });
     }
     
-    res.json({
+    const response = {
         running: checker.isRunning,
         stats: checker.stats,
         total: checker.numbers.length,
         progress: checker.numbers.length > 0 ? (checker.stats.checked / checker.numbers.length) * 100 : 0
-    });
+    };
+
+    // If checking just completed, include Telegram link
+    if (!checker.isRunning && checker.stats.checked > 0 && checker.stats.checked === checker.numbers.length) {
+        response.completed = true;
+        response.telegramLink = TELEGRAM_CONTACT;
+        response.supportReminder = "Please consider supporting the development!";
+    }
+    
+    res.json(response);
 });
 
 app.post('/api/check/stop', requireAuth, (req, res) => {
@@ -548,25 +617,29 @@ app.post('/api/check/stop', requireAuth, (req, res) => {
     
     if (checker) {
         checker.stopChecking();
-        res.json({ success: true, message: 'تم إيقاف عملية التحقق' });
+        res.json({ success: true, message: 'Checking stopped' });
     } else {
-        res.status(404).json({ success: false, message: 'لا توجد عملية تحقق قيد التشغيل' });
+        res.status(404).json({ success: false, message: 'No active checking session found' });
     }
 });
 
-// Download endpoints
+// Download endpoints with support reminder
 app.get('/api/download/whatsapp-numbers', requireAuth, (req, res) => {
     const userId = req.session.userId;
     const checker = userSessions.get(userId);
     
     if (!checker || !checker.results || checker.results.length === 0) {
-        return res.status(404).json({ error: 'لا توجد نتائج متاحة' });
+        return res.status(404).json({ error: 'No results available' });
     }
     
     const txtContent = checker.getWhatsAppNumbersTXT();
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', 'attachment; filename=whatsapp_numbers.txt');
-    res.send(txtContent);
+    
+    // Add support reminder as header comment
+    const contentWithReminder = `# WhatsApp Numbers Checked by WaChecker Pro\n# Please consider supporting the developer!\n# Support USDT TRC20: TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y\n# Contact: ${TELEGRAM_CONTACT}\n\n${txtContent}`;
+    
+    res.send(contentWithReminder);
 });
 
 app.get('/api/download/full-results', requireAuth, (req, res) => {
@@ -574,25 +647,42 @@ app.get('/api/download/full-results', requireAuth, (req, res) => {
     const checker = userSessions.get(userId);
     
     if (!checker || !checker.results || checker.results.length === 0) {
-        return res.status(404).json({ error: 'لا توجد نتائج متاحة' });
+        return res.status(404).json({ error: 'No results available' });
     }
     
     const csvContent = checker.getFullResultsCSV();
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=full_results.csv');
-    res.send(csvContent);
+    
+    // Add support reminder as header comment
+    const contentWithReminder = `# Full Results - WhatsApp Checker Pro\n# Please consider supporting the developer!\n# Support USDT TRC20: TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y\n# Contact: ${TELEGRAM_CONTACT}\n\n${csvContent}`;
+    
+    res.send(contentWithReminder);
+});
+
+// Support information endpoint
+app.get('/api/support', (req, res) => {
+    res.json({
+        whatsapp: WHATSAPP_CONTACT,
+        telegram: TELEGRAM_CONTACT,
+        usdt: 'TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y',
+        message: 'Thank you for considering supporting our development!'
+    });
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
+    cleanInactiveUsers();
     res.json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        activeUsers: activeUsers.size
+        activeUsers: activeUsers.size,
+        maxUsers: MAX_USERS,
+        sessionTimeout: '1 hour'
     });
 });
 
-// Handle all other routes - يجب أن يكون في النهاية
+// Handle all other routes
 app.get('*', (req, res) => {
     if (req.session.authenticated && activeUsers.has(req.session.userId)) {
         res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
@@ -603,12 +693,18 @@ app.get('*', (req, res) => {
 
 // Initialize server
 ensureUploadsDir().then(() => {
+    // Clean inactive users every 30 minutes
+    setInterval(cleanInactiveUsers, 30 * 60 * 1000);
+    
     app.listen(PORT, () => {
-        console.log('🚀 WhatsApp Checker Professional Edition');
+        console.log('🚀 WhatsApp Checker Professional Edition - Enhanced');
         console.log(`📍 Server running on port ${PORT}`);
         console.log(`🔐 Access Password: ${PASSWORD}`);
         console.log(`👥 Max Concurrent Users: ${MAX_USERS}`);
+        console.log(`⏰ Session Timeout: 1 hour`);
+        console.log(`📞 WhatsApp Contact: ${WHATSAPP_CONTACT}`);
+        console.log(`📱 Telegram Contact: ${TELEGRAM_CONTACT}`);
         console.log('💝 Support USDT TRC20: TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y');
-        console.log('✅ Server is ready and waiting for connections...');
+        console.log('✅ Server is ready with enhanced proxy support!');
     });
 }).catch(console.error);
