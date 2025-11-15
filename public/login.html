@@ -3,100 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnaDom WhatsApp Checker - تسجيل الدخول</title>
+    <title>تسجيل الدخول - فاحص واتساب</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Cairo', sans-serif;
         }
-
-        :root {
-            --primary: #00f2fe;
-            --secondary: #4facfe;
-            --accent: #ff2d75;
-            --dark: #0f172a;
-            --darker: #020617;
-            --light: #f8fafc;
-            --gray: #64748b;
-        }
-
+        
         body {
-            background: linear-gradient(135deg, var(--darker), var(--dark));
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--light);
-            overflow-x: hidden;
+            padding: 20px;
         }
-
-        .background-effects {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            overflow: hidden;
-        }
-
-        .neon-circle {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px);
-            opacity: 0.3;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .circle-1 {
-            width: 300px;
-            height: 300px;
-            background: var(--primary);
-            top: 10%;
-            left: 10%;
-            animation-delay: 0s;
-        }
-
-        .circle-2 {
-            width: 200px;
-            height: 200px;
-            background: var(--accent);
-            top: 60%;
-            right: 10%;
-            animation-delay: 2s;
-        }
-
-        .circle-3 {
-            width: 250px;
-            height: 250px;
-            background: var(--secondary);
-            bottom: 10%;
-            left: 20%;
-            animation-delay: 4s;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-20px) scale(1.05); }
-        }
-
+        
         .login-container {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 247, 255, 0.2);
             border-radius: 20px;
-            padding: 3rem;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 
-                0 0 50px rgba(0, 242, 254, 0.1),
-                0 0 100px rgba(79, 172, 254, 0.05);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 50px rgba(0, 247, 255, 0.1);
             position: relative;
             overflow: hidden;
         }
-
+        
         .login-container::before {
             content: '';
             position: absolute;
@@ -104,291 +43,271 @@
             left: -2px;
             right: -2px;
             bottom: -2px;
-            background: linear-gradient(45deg, var(--primary), var(--secondary), var(--accent));
+            background: linear-gradient(45deg, #00f7ff, #0066ff, #00f7ff);
             border-radius: 22px;
             z-index: -1;
-            animation: borderGlow 3s ease-in-out infinite;
+            animation: borderAnimation 3s linear infinite;
         }
-
-        @keyframes borderGlow {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+        
+        @keyframes borderAnimation {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
         }
-
+        
         .logo {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 30px;
         }
-
+        
         .logo h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
+            color: #00f7ff;
+            font-size: 28px;
             font-weight: 700;
+            text-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
         }
-
+        
         .logo p {
-            color: var(--gray);
-            font-size: 1.1rem;
+            color: #888;
+            font-size: 14px;
+            margin-top: 5px;
         }
-
+        
         .form-group {
-            margin-bottom: 1.5rem;
-            position: relative;
+            margin-bottom: 20px;
         }
-
+        
         .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: var(--light);
-            font-weight: 500;
+            color: #00f7ff;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
-
-        .form-input {
+        
+        .form-group input {
             width: 100%;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 247, 255, 0.3);
             border-radius: 10px;
-            color: var(--light);
-            font-size: 1rem;
+            color: #fff;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
-
-        .form-input:focus {
+        
+        .form-group input:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
-            background: rgba(255, 255, 255, 0.08);
+            border-color: #00f7ff;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
         }
-
+        
         .login-btn {
             width: 100%;
-            padding: 1rem;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            padding: 12px;
+            background: linear-gradient(45deg, #00f7ff, #0066ff);
             border: none;
             border-radius: 10px;
-            color: var(--darker);
-            font-size: 1.1rem;
-            font-weight: 600;
+            color: #000;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
-
+        
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 242, 254, 0.4);
+            box-shadow: 0 5px 15px rgba(0, 247, 255, 0.4);
         }
-
-        .login-btn:active {
-            transform: translateY(0);
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
-
-        .login-btn::before {
-            content: '';
-            position: absolute;
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
             top: 0;
-            left: -100%;
+            left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
-
-        .login-btn:hover::before {
-            left: 100%;
-        }
-
-        .support-info {
-            text-align: center;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .support-info p {
-            color: var(--gray);
-            margin-bottom: 0.5rem;
-        }
-
-        .password-request {
-            background: rgba(255, 45, 117, 0.1);
-            border: 1px solid rgba(255, 45, 117, 0.3);
-            border-radius: 10px;
-            padding: 1rem;
-            margin-top: 1rem;
+        
+        .modal-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
             text-align: center;
         }
-
-        .password-request a {
-            color: var(--accent);
+        
+        .modal h2 {
+            color: #ff4444;
+            margin-bottom: 15px;
+        }
+        
+        .modal p {
+            color: #fff;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .modal-btn {
+            background: linear-gradient(45deg, #ff4444, #cc0000);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
             text-decoration: none;
-            font-weight: 500;
+            display: inline-block;
         }
-
-        .password-request a:hover {
-            text-decoration: underline;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            text-align: center;
+        
+        .loading {
             display: none;
-        }
-
-        .alert-error {
-            background: rgba(255, 45, 117, 0.1);
-            border: 1px solid var(--accent);
-            color: var(--accent);
-        }
-
-        .alert-success {
-            background: rgba(0, 242, 254, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-        }
-
-        .session-info {
-            background: rgba(79, 172, 254, 0.1);
-            border: 1px solid var(--secondary);
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1rem;
             text-align: center;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .login-container {
-                padding: 2rem;
-                margin: 1rem;
-            }
-
-            .logo h1 {
-                font-size: 2rem;
-            }
+            color: #00f7ff;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="background-effects">
-        <div class="neon-circle circle-1"></div>
-        <div class="neon-circle circle-2"></div>
-        <div class="neon-circle circle-3"></div>
-    </div>
-
     <div class="login-container">
         <div class="logo">
-            <h1>AnaDom</h1>
-            <p>WhatsApp Checker Pro</p>
+            <h1>🔍 فاحص واتساب</h1>
+            <p>WhatsApp Number Checker System</p>
         </div>
-
-        <div class="session-info" id="sessionInfo">
-            <i>جلسات نشطة: <span id="activeSessions">0</span>/10</i>
-        </div>
-
-        <div class="alert alert-error" id="errorAlert"></div>
-        <div class="alert alert-success" id="successAlert"></div>
-
+        
         <form id="loginForm">
             <div class="form-group">
-                <label for="password">كلمة المرور</label>
-                <input type="password" id="password" class="form-input" placeholder="أدخل كلمة المرور" required>
+                <label for="password">كلمة المرور:</label>
+                <input type="password" id="password" placeholder="أدخل كلمة المرور" required>
             </div>
             
             <button type="submit" class="login-btn" id="loginBtn">
-                <span id="btnText">تسجيل الدخول</span>
-                <div id="btnLoader" style="display: none;">جاري التحقق...</div>
+                تسجيل الدخول
             </button>
         </form>
-
-        <div class="password-request">
-            <p>لا تملك كلمة المرور؟</p>
-            <a href="https://wa.me/19177281677?text=PassWord" target="_blank">
-                اطلب كلمة المرور عبر واتساب
-            </a>
+        
+        <div class="loading" id="loading">
+            جاري التحقق...
         </div>
-
-        <div class="support-info">
-            <p>للنسخة الخاصة والدعم الفني:</p>
-            <p>https://wa.me/19177281677</p>
+    </div>
+    
+    <div class="modal" id="errorModal">
+        <div class="modal-content">
+            <h2>خطأ</h2>
+            <p id="errorMessage"></p>
+            <button class="modal-btn" onclick="closeModal()">حسناً</button>
+        </div>
+    </div>
+    
+    <div class="modal" id="fullModal">
+        <div class="modal-content">
+            <h2>السيرفر مكتمل</h2>
+            <p>السيرفر مكتمل الآن. يرجى الانتظار ساعة، أو شراء نسخة خاصة بك.</p>
+            <a href="https://wa.me/19177281677" class="modal-btn" target="_blank">
+                التواصل على واتساب
+            </a>
         </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        const loginForm = document.getElementById('loginForm');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const loading = document.getElementById('loading');
+        const errorModal = document.getElementById('errorModal');
+        const fullModal = document.getElementById('fullModal');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorModal.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            errorModal.style.display = 'none';
+            fullModal.style.display = 'none';
+        }
+        
+        function shakeForm() {
+            loginForm.classList.add('shake');
+            setTimeout(() => {
+                loginForm.classList.remove('shake');
+            }, 500);
+        }
+        
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const password = document.getElementById('password').value;
-            const loginBtn = document.getElementById('loginBtn');
-            const btnText = document.getElementById('btnText');
-            const btnLoader = document.getElementById('btnLoader');
-            const errorAlert = document.getElementById('errorAlert');
-            const successAlert = document.getElementById('successAlert');
-
-            // Show loading state
-            btnText.style.display = 'none';
-            btnLoader.style.display = 'block';
+            const password = passwordInput.value.trim();
+            
+            if (!password) {
+                showError('يرجى إدخال كلمة المرور');
+                return;
+            }
+            
             loginBtn.disabled = true;
-            errorAlert.style.display = 'none';
-            successAlert.style.display = 'none';
-
+            loading.style.display = 'block';
+            
             try {
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ password })
                 });
-
+                
                 const data = await response.json();
-
-                if (data.success) {
-                    successAlert.textContent = 'تم تسجيل الدخول بنجاح!';
-                    successAlert.style.display = 'block';
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 1000);
+                
+                if (response.ok) {
+                    localStorage.setItem('sessionToken', data.token);
+                    localStorage.setItem('sessionExpires', data.expires);
+                    window.location.href = 'dashboard.html';
                 } else {
-                    errorAlert.textContent = data.message;
-                    errorAlert.style.display = 'block';
+                    if (data.error && data.error.includes('مكتمل')) {
+                        fullModal.style.display = 'flex';
+                    } else {
+                        showError(data.error || 'خطأ في تسجيل الدخول');
+                        shakeForm();
+                    }
                 }
             } catch (error) {
-                errorAlert.textContent = 'خطأ في الاتصال بالسيرفر';
-                errorAlert.style.display = 'block';
+                showError('خطأ في الاتصال بالسيرفر');
+                shakeForm();
             } finally {
-                btnText.style.display = 'block';
-                btnLoader.style.display = 'none';
                 loginBtn.disabled = false;
+                loading.style.display = 'none';
             }
         });
-
-        // Load session info
-        async function loadSessionInfo() {
-            try {
-                const response = await fetch('/api/session-info');
-                const data = await response.json();
-                document.getElementById('activeSessions').textContent = data.activeSessions;
-                
-                if (data.activeSessions >= data.maxSessions) {
-                    document.getElementById('sessionInfo').innerHTML = 
-                        '<i>⚠️ السرفر مكتمل حاليًا. الرجاء الانتظار...</i>';
-                }
-            } catch (error) {
-                console.error('Error loading session info:', error);
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === errorModal || e.target === fullModal) {
+                closeModal();
             }
-        }
-
-        loadSessionInfo();
-        setInterval(loadSessionInfo, 30000); // Update every 30 seconds
+        });
     </script>
 </body>
 </html>
