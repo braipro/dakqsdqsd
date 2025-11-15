@@ -95,6 +95,15 @@
             font-weight: 600;
         }
 
+        .session-info {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -209,7 +218,7 @@
 
         .progress-header {
             display: flex;
-            justify-content: between;
+            justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
         }
@@ -343,6 +352,12 @@
             border: 1px solid #fde68a;
         }
 
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
         /* Support Section */
         .support-section {
             background: linear-gradient(135deg, #1e293b, #334155);
@@ -366,6 +381,31 @@
 
         .support-address:hover {
             background: rgba(255, 255, 255, 0.2);
+        }
+
+        .contact-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-link {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            color: white;
+            text-decoration: none;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .contact-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
 
         /* Footer */
@@ -394,6 +434,37 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
         /* Utility Classes */
         .text-center { text-align: center; }
         .text-success { color: var(--accent); }
@@ -412,8 +483,9 @@
                     <span>WhatsApp Checker Pro</span>
                 </div>
                 <div class="user-stats">
+                    <div class="session-info">⏰ Session: 1 hour</div>
                     <div class="user-count">
-                        👥 <span id="activeUsers">0</span>/10 Users Online
+                        👥 <span id="activeUsers">0</span>/10 Online
                     </div>
                     <button class="btn btn-outline" onclick="logout()">
                         <span>🚪 Logout</span>
@@ -465,7 +537,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                             <div>
                                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Delay (ms)</label>
-                                <input type="number" id="delayInput" value="1000" min="500" 
+                                <input type="number" id="delayInput" value="2000" min="1000" max="10000"
                                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);">
                             </div>
                             <div>
@@ -539,17 +611,71 @@
             <div class="support-section">
                 <h3>💝 Support the Development</h3>
                 <p>If you find this tool helpful, consider supporting the developer for more amazing tools</p>
+                
                 <div class="support-address" id="supportAddress">
                     TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
                 </div>
-                <p>USDT TRC20 - Thank you for your support! ❤️</p>
+                <p style="margin-bottom: 1rem;">USDT TRC20 - Your support keeps this project alive! ❤️</p>
+
+                <div class="contact-links">
+                    <a href="https://wa.me/19177281677" class="contact-link" target="_blank">
+                        <span>📞 WhatsApp</span>
+                    </a>
+                    <a href="https://t.me/MrAnadom" class="contact-link" target="_blank">
+                        <span>📱 Telegram</span>
+                    </a>
+                </div>
             </div>
         </main>
 
         <!-- Footer -->
         <footer class="footer">
-            <div>WhatsApp Checker Pro v0.1 • Built with ❤️ by Anadom</div>
+            <div>WhatsApp Checker Pro v0.1 • Built with ❤️ by Anadom • Session timeout: 1 hour</div>
         </footer>
+    </div>
+
+    <!-- Support Reminder Modal -->
+    <div id="supportModal" class="modal">
+        <div class="modal-content">
+            <div class="card-icon" style="margin: 0 auto 1rem;">💝</div>
+            <h3>Support Our Development</h3>
+            <p>Thank you for using WhatsApp Checker Pro! If this tool has been helpful, please consider supporting our work.</p>
+            
+            <div style="background: #f8f9fa; padding: 1rem; border-radius: var(--radius); margin: 1rem 0;">
+                <strong>USDT TRC20:</strong>
+                <div style="font-family: monospace; word-break: break-all; margin-top: 0.5rem;">
+                    TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="closeSupportModal()">
+                    <span>I'll Support Later</span>
+                </button>
+                <button class="btn btn-success" onclick="openTelegram()">
+                    <span>Contact Developer</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="completionModal" class="modal">
+        <div class="modal-content">
+            <div class="card-icon" style="margin: 0 auto 1rem; background: var(--accent);">🎉</div>
+            <h3>Checking Completed!</h3>
+            <p>Your WhatsApp number checking has been completed successfully.</p>
+            <p style="margin-top: 1rem;">Please consider adding the developer on Telegram for updates and support:</p>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-outline" onclick="closeCompletionModal()">
+                    <span>Skip</span>
+                </button>
+                <button class="btn btn-primary" onclick="openTelegram()">
+                    <span>📱 Open Telegram</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -559,10 +685,12 @@
                 this.initializeEventListeners();
                 this.updateUserStats();
                 setInterval(() => this.updateUserStats(), 30000);
+                
+                // Show session info
+                this.showAlert('Your session will expire in 1 hour for security reasons.', 'info');
             }
 
             initializeEventListeners() {
-                // File upload handlers
                 this.setupFileUpload('numbersFile', 'numbersUploadArea', 'numbersInfo', '/api/upload/numbers');
                 this.setupFileUpload('proxiesFile', 'proxiesUploadArea', 'proxiesInfo', '/api/upload/proxies');
             }
@@ -595,10 +723,10 @@
                 if (!file) return;
 
                 const originalText = info.innerHTML;
-                info.innerHTML = '<div class="file-name">Uploading...</div>';
+                info.innerHTML = '<div class="file-name">Uploading...</div><div class="file-count">Please wait</div>';
 
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append(input.id === 'numbersFile' ? 'numbersFile' : 'proxiesFile', file);
 
                 try {
                     const response = await fetch(endpoint, {
@@ -606,12 +734,21 @@
                         body: formData
                     });
 
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server returned invalid response. Please try again.');
+                    }
+
                     const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Upload failed');
+                    }
 
                     if (data.success) {
                         info.innerHTML = `
                             <div class="file-name">✓ ${file.name}</div>
-                            <div class="file-count">${data.count || 'Unknown'} items</div>
+                            <div class="file-count">${data.count || '0'} items</div>
                         `;
                         this.showAlert(data.message, 'success');
                     } else {
@@ -620,8 +757,17 @@
                         input.value = '';
                     }
                 } catch (error) {
+                    console.error('Upload error:', error);
                     info.innerHTML = originalText;
-                    this.showAlert('Upload failed: ' + error.message, 'error');
+                    
+                    if (error.message.includes('authentication') || error.message.includes('session')) {
+                        this.showAlert('Your session has expired. Please login again.', 'error');
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 2000);
+                    } else {
+                        this.showAlert('Upload failed: ' + error.message, 'error');
+                    }
                     input.value = '';
                 }
             }
@@ -630,7 +776,6 @@
                 const delay = document.getElementById('delayInput').value;
                 const retries = document.getElementById('retriesInput').value;
 
-                // Update UI
                 document.getElementById('startBtn').disabled = true;
                 document.getElementById('stopBtn').disabled = false;
                 document.getElementById('startBtn').innerHTML = '<span class="loading"></span> Starting...';
@@ -668,7 +813,7 @@
                         
                         if (!data.running) {
                             clearInterval(this.checkInterval);
-                            this.onCheckingComplete();
+                            this.onCheckingComplete(data);
                         }
                     } catch (error) {
                         console.error('Progress check failed:', error);
@@ -687,7 +832,7 @@
                 document.getElementById('whatsappNo').textContent = data.stats.withoutWhatsApp || 0;
             }
 
-            onCheckingComplete() {
+            onCheckingComplete(data) {
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
                 document.getElementById('downloadWhatsAppBtn').disabled = false;
@@ -695,6 +840,13 @@
                 document.getElementById('startBtn').innerHTML = '<span>▶ Start Checking</span>';
                 
                 this.showAlert('Checking completed successfully!', 'success');
+                
+                // Show completion modal with Telegram link
+                if (data.completed) {
+                    setTimeout(() => {
+                        document.getElementById('completionModal').style.display = 'block';
+                    }, 1000);
+                }
             }
 
             async stopChecking() {
@@ -721,11 +873,21 @@
             }
 
             async downloadWhatsAppNumbers() {
-                window.open('/api/download/whatsapp-numbers', '_blank');
+                this.showSupportModal();
+                setTimeout(() => {
+                    window.open('/api/download/whatsapp-numbers', '_blank');
+                }, 1000);
             }
 
             async downloadFullResults() {
-                window.open('/api/download/full-results', '_blank');
+                this.showSupportModal();
+                setTimeout(() => {
+                    window.open('/api/download/full-results', '_blank');
+                }, 1000);
+            }
+
+            showSupportModal() {
+                document.getElementById('supportModal').style.display = 'block';
             }
 
             async updateUserStats() {
@@ -753,6 +915,7 @@
                     window.location.href = '/login';
                 } catch (error) {
                     console.error('Logout failed:', error);
+                window.location.href = '/login';
                 }
             }
         }
@@ -760,12 +923,30 @@
         // Initialize app
         const app = new WhatsAppCheckerApp();
 
-        // Global functions for HTML onclick
+        // Global functions
         function startChecking() { app.startChecking(); }
         function stopChecking() { app.stopChecking(); }
         function downloadWhatsAppNumbers() { app.downloadWhatsAppNumbers(); }
         function downloadFullResults() { app.downloadFullResults(); }
         function logout() { app.logout(); }
+
+        function closeSupportModal() {
+            document.getElementById('supportModal').style.display = 'none';
+        }
+
+        function closeCompletionModal() {
+            document.getElementById('completionModal').style.display = 'none';
+        }
+
+        function openTelegram() {
+            window.open('https://t.me/MrAnadom', '_blank');
+            closeSupportModal();
+            closeCompletionModal();
+        }
+
+        function openWhatsApp() {
+            window.open('https://wa.me/19177281677', '_blank');
+        }
 
         // Support address copy
         document.getElementById('supportAddress').addEventListener('click', function() {
@@ -773,61 +954,30 @@
                 app.showAlert('Support address copied to clipboard!', 'success');
             });
         });
-                // تحسين معالجة الأخطاء في رفع الملفات
-        async handleFileUpload(input, info, endpoint) {
-            const file = input.files[0];
-            if (!file) return;
 
-            const originalText = info.innerHTML;
-            info.innerHTML = '<div class="file-name">جاري الرفع...</div><div class="file-count">يرجى الانتظار</div>';
-
-            const formData = new FormData();
-            formData.append(input.id === 'numbersFile' ? 'numbersFile' : 'proxiesFile', file);
-
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                // تحقق إذا كان الرد JSON صالح
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('الخادم لم يرجع استجابة صحيحة. قد تكون هناك مشكلة في المصادقة.');
-                }
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'فشل في رفع الملف');
-                }
-
-                if (data.success) {
-                    info.innerHTML = `
-                        <div class="file-name">✓ ${file.name}</div>
-                        <div class="file-count">${data.count || '0'} عنصر</div>
-                    `;
-                    this.showAlert(data.message, 'success');
-                } else {
-                    info.innerHTML = originalText;
-                    this.showAlert(data.message, 'error');
-                    input.value = '';
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                info.innerHTML = originalText;
-                
-                if (error.message.includes('المصادقة')) {
-                    this.showAlert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.', 'error');
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 2000);
-                } else {
-                    this.showAlert('فشل الرفع: ' + error.message, 'error');
-                }
-                input.value = '';
+        // Close modals when clicking outside
+        window.addEventListener('click', function(event) {
+            const supportModal = document.getElementById('supportModal');
+            const completionModal = document.getElementById('completionModal');
+            
+            if (event.target === supportModal) {
+                supportModal.style.display = 'none';
             }
-        }
+            if (event.target === completionModal) {
+                completionModal.style.display = 'none';
+            }
+        });
+
+        // Session timeout warning
+        let sessionWarningShown = false;
+        setInterval(() => {
+            if (!sessionWarningShown) {
+                sessionWarningShown = true;
+                setTimeout(() => {
+                    app.showAlert('Your session will expire in 15 minutes. Please save your work.', 'warning');
+                }, 45 * 60 * 1000); // 45 minutes
+            }
+        }, 1000);
     </script>
 </body>
 </html>
