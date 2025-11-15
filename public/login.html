@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - WaChecker By Anadom</title>
+    <title>Login - WhatsApp Checker Pro</title>
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,153 +22,208 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 2rem;
         }
 
         .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 3rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
             text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            background: #3498db;
-            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            font-weight: bold;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .logo-text {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
         }
 
         .subtitle {
-            color: #7f8c8d;
-            margin-bottom: 30px;
+            color: var(--text-light);
+            margin-bottom: 2rem;
         }
 
         .form-group {
-            margin-bottom: 20px;
-            text-align: right;
+            margin-bottom: 1.5rem;
+            text-align: left;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
-            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            color: var(--text);
             font-weight: 600;
         }
 
         input[type="password"] {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
         }
 
         input[type="password"]:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         .btn {
             width: 100%;
-            padding: 12px;
-            background: #3498db;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: var(--radius);
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
         }
 
         .btn:hover {
-            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .alert {
-            padding: 12px;
-            margin: 15px 0;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 600;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: var(--radius);
+            font-weight: 500;
             display: none;
         }
 
         .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
 
         .support-section {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e9ecef;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
         }
 
         .support-address {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            margin: 10px 0;
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin: 1rem 0;
             word-break: break-all;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
         }
 
         .support-address:hover {
-            background: #e9ecef;
+            background: #f1f5f9;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="logo">WA</div>
-        <h1>WaChecker By Anadom</h1>
-        <p class="subtitle">V 0.1 - أداة التحقق من أرقام الواتساب</p>
+        <div class="logo">
+            <div class="logo-icon">WA</div>
+            <div class="logo-text">WhatsApp Checker Pro</div>
+        </div>
+        
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Enter your password to access the dashboard</p>
         
         <div class="alert alert-error" id="errorAlert"></div>
         
         <form id="loginForm">
             <div class="form-group">
-                <label for="password">كلمة المرور:</label>
-                <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+                <label for="password">Access Password</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="Enter your secure password" autocomplete="current-password">
             </div>
             
-            <button type="submit" class="btn">🔐 تسجيل الدخول</button>
+            <button type="submit" class="btn" id="loginBtn">
+                <span>🔐 Login to Dashboard</span>
+            </button>
         </form>
 
         <div class="support-section">
-            <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">💝 للدعم والتبرع:</p>
+            <p style="color: var(--text-light); font-size: 0.875rem; margin-bottom: 1rem;">
+                💝 Support the Development
+            </p>
             <div class="support-address" id="supportAddress">
                 TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
             </div>
-            <p style="color: #7f8c8d; font-size: 12px;">USDT TRC20</p>
+            <p style="color: var(--text-light); font-size: 0.75rem;">
+                USDT TRC20 - Your support matters! ❤️
+            </p>
         </div>
     </div>
 
@@ -168,9 +233,14 @@
             
             const password = document.getElementById('password').value;
             const errorAlert = document.getElementById('errorAlert');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Update button state
+            loginBtn.innerHTML = '<span class="loading"></span> Authenticating...';
+            loginBtn.disabled = true;
             
             try {
-                const response = await fetch('/login', {
+                const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -185,24 +255,38 @@
                 } else {
                     errorAlert.textContent = data.message;
                     errorAlert.style.display = 'block';
+                    loginBtn.innerHTML = '<span>🔐 Login to Dashboard</span>';
+                    loginBtn.disabled = false;
                 }
             } catch (error) {
-                errorAlert.textContent = 'خطأ في الاتصال بالخادم';
+                errorAlert.textContent = 'Network error: Unable to connect to server';
                 errorAlert.style.display = 'block';
+                loginBtn.innerHTML = '<span>🔐 Login to Dashboard</span>';
+                loginBtn.disabled = false;
             }
         });
 
-        // نسخ عنوان الدعم
+        // Copy support address
         document.getElementById('supportAddress').addEventListener('click', function() {
             const text = this.textContent;
             navigator.clipboard.writeText(text).then(() => {
                 const errorAlert = document.getElementById('errorAlert');
-                errorAlert.textContent = 'تم نسخ عنوان الدعم إلى الحافظة';
+                errorAlert.textContent = 'Support address copied to clipboard!';
                 errorAlert.style.display = 'block';
-                errorAlert.style.background = '#d4edda';
-                errorAlert.style.color = '#155724';
-                errorAlert.style.borderColor = '#c3e6cb';
+                errorAlert.style.background = '#d1fae5';
+                errorAlert.style.color = '#065f46';
+                errorAlert.style.borderColor = '#a7f3d0';
+                
+                setTimeout(() => {
+                    errorAlert.style.display = 'none';
+                }, 3000);
             });
+        });
+
+        // Clear error when user starts typing
+        document.getElementById('password').addEventListener('input', function() {
+            const errorAlert = document.getElementById('errorAlert');
+            errorAlert.style.display = 'none';
         });
     </script>
 </body>
