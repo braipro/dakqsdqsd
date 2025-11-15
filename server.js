@@ -2,16 +2,13 @@
 
 import express from 'express';
 import session from 'express-session';
+import multer from 'multer';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
-
-// استيراد HttpsProxyAgent بشكل متوافق مع ES modules
-import HttpsProxyAgentPackage from 'https-proxy-agent';
-const { HttpsProxyAgent } = HttpsProxyAgentPackage;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +21,7 @@ app.use(session({
     secret: 'AnaDom3301-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 24 ساعة
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -32,14 +29,28 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static('public'));
 
-// تخزين المستخدمين النشطين
+// تكوين multer لرفع الملفات
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const userDir = path.join(__dirname, 'uploads', req.session.userId || 'temp');
+        cb(null, userDir);
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+// تخزين المستخدمين النشطين ومدققات الواتساب
 const activeUsers = new Map();
+const userCheckers = new Map();
 const MAX_USERS = 10;
 const PASSWORD = 'AnaDom3301';
 
-// فئة مدقق الواتساب
+// فئة مدقق الواتساب (مبنية على السكريبت الأصلي)
 class WhatsAppChecker {
-    constructor(options = {}) {
+    constructor(userId, options = {}) {
+        this.userId = userId;
         this.options = {
             delay: parseInt(options.delay) || 1000,
             maxRetries: parseInt(options.retries) || 3,
@@ -60,22 +71,36 @@ class WhatsAppChecker {
     }
 
     cleanPhoneNumber(number) {
-        // إزالة جميع المسافات، +، -، والأحرف غير رقمية
         return number.replace(/[\s+\-()]/g, '');
     }
 
-    setNumbers(numbers) {
-        this.numbers = numbers
-            .map(line => this.cleanPhoneNumber(line.trim()))
-            .filter(line => line && !line.startsWith('#'))
-            .filter(line => /^\d+$/.test(line));
-    }
+    async loadFiles(numbersFile, proxiesFile) {
+        try {
+            // تحميل الأرقام
+            const numbersContent = await fs.readFile(numbersFile, 'utf8');
+            this.numbers = numbersContent
+                .split('\n')
+                .map(line => this.cleanPhoneNumber(line.trim()))
+                .filter(line => line && !line.startsWith('#'))
+                .filter(line => /^\d+$/.test(line));
 
-    setProxies(proxies) {
-        this.proxies = proxies
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'))
-            .filter(line => line.includes(':') || line.startsWith('http'));
+            console.log(`Loaded ${this.numbers.length} phone numbers`);
+
+            // تحميل البروكسيات
+            const proxiesContent = await fs.readFile(proxiesFile, 'utf8');
+            this.proxies = proxiesContent
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'))
+                .filter(line => line.includes(':') || line.startsWith('http'));
+
+            console.log(`Loaded ${this.proxies.length} proxies`);
+
+            return true;
+        } catch (error) {
+            console.error('Error loading files:', error.message);
+            return false;
+        }
     }
 
     getNextProxy() {
@@ -98,14 +123,19 @@ class WhatsAppChecker {
 
         if (proxy) {
             try {
+                // استخدام الوكيل بشكل مبسط
                 let proxyUrl = proxy;
                 if (!proxy.startsWith('http')) {
                     proxyUrl = `http://${proxy}`;
                 }
-                config.httpsAgent = new HttpsProxyAgent(proxyUrl);
-                config.proxy = false;
+                const [host, port] = proxyUrl.replace('http://', '').split(':');
+                config.proxy = {
+                    protocol: 'http',
+                    host: host,
+                    port: parseInt(port) || 8080
+                };
             } catch (error) {
-                console.log(`⚠ Invalid proxy format: ${proxy}`);
+                console.log(`Invalid proxy format: ${proxy}`);
             }
         }
 
@@ -150,7 +180,7 @@ class WhatsAppChecker {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async startChecking(onProgress, onComplete) {
+    async startChecking() {
         this.isRunning = true;
         this.stats = { checked: 0, withWhatsApp: 0, withoutWhatsApp: 0, errors: 0 };
         this.results = [];
@@ -173,13 +203,8 @@ class WhatsAppChecker {
 
             this.stats.checked++;
             
-            if (onProgress) {
-                onProgress({
-                    ...this.stats,
-                    currentNumber: number,
-                    progress: (this.stats.checked / this.numbers.length) * 100
-                });
-            }
+            // حفظ النتائج بعد كل رقم
+            await this.saveResults();
             
             if (this.stats.checked < this.numbers.length) {
                 await this.delay(this.options.delay);
@@ -187,8 +212,24 @@ class WhatsAppChecker {
         }
 
         this.isRunning = false;
-        if (onComplete) {
-            onComplete(this.results);
+        return this.results;
+    }
+
+    async saveResults() {
+        try {
+            const output = this.results.map(result => {
+                if (result.success) {
+                    return `${result.phone},${result.exists ? 'YES' : 'NO'}`;
+                } else {
+                    return `${result.phone},ERROR,${result.error}`;
+                }
+            }).join('\n');
+            
+            const header = 'Phone Number,WhatsApp Status,Error\n';
+            const outputFile = path.join(__dirname, 'uploads', this.userId, 'results.csv');
+            await fs.writeFile(outputFile, header + output);
+        } catch (error) {
+            console.error('Error saving results:', error.message);
         }
     }
 
@@ -210,11 +251,9 @@ class WhatsAppChecker {
 
 // Middleware للتحقق من المصادقة
 function requireAuth(req, res, next) {
-    if (req.session.authenticated) {
+    if (req.session.authenticated && activeUsers.has(req.session.userId)) {
         // تحديث وقت النشاط
-        if (activeUsers.has(req.session.userId)) {
-            activeUsers.get(req.session.userId).lastActive = Date.now();
-        }
+        activeUsers.get(req.session.userId).lastActive = Date.now();
         next();
     } else {
         res.redirect('/login');
@@ -229,7 +268,20 @@ function cleanInactiveUsers() {
     for (const [userId, userData] of activeUsers.entries()) {
         if (now - userData.lastActive > inactiveTime) {
             activeUsers.delete(userId);
+            userCheckers.delete(userId);
+            // تنظيف ملفات المستخدم
+            const userDir = path.join(__dirname, 'uploads', userId);
+            fs.rm(userDir, { recursive: true, force: true }).catch(() => {});
         }
+    }
+}
+
+// إنشاء مجلد التحميلات
+async function ensureUploadsDir() {
+    try {
+        await fs.access(path.join(__dirname, 'uploads'));
+    } catch {
+        await fs.mkdir(path.join(__dirname, 'uploads'), { recursive: true });
     }
 }
 
@@ -239,7 +291,7 @@ app.get('/', requireAuth, (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-    if (req.session.authenticated) {
+    if (req.session.authenticated && activeUsers.has(req.session.userId)) {
         return res.redirect('/');
     }
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
@@ -266,6 +318,12 @@ app.post('/login', (req, res) => {
             lastActive: Date.now(),
             userAgent: req.get('User-Agent')
         });
+
+        // إنشاء مجلد للمستخدم
+        ensureUploadsDir().then(() => {
+            const userDir = path.join(__dirname, 'uploads', userId);
+            return fs.mkdir(userDir, { recursive: true });
+        }).catch(console.error);
         
         res.json({ success: true });
     } else {
@@ -274,9 +332,17 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/logout', requireAuth, (req, res) => {
-    if (activeUsers.has(req.session.userId)) {
-        activeUsers.delete(req.session.userId);
+    const userId = req.session.userId;
+    if (activeUsers.has(userId)) {
+        activeUsers.delete(userId);
     }
+    if (userCheckers.has(userId)) {
+        userCheckers.delete(userId);
+    }
+    // تنظيف ملفات المستخدم
+    const userDir = path.join(__dirname, 'uploads', userId);
+    fs.rm(userDir, { recursive: true, force: true }).catch(() => {});
+    
     req.session.destroy();
     res.json({ success: true });
 });
@@ -289,38 +355,56 @@ app.get('/status', requireAuth, (req, res) => {
     });
 });
 
-app.post('/check', requireAuth, async (req, res) => {
-    const { numbers, proxies, delay, retries } = req.body;
-    
-    if (!req.session.checker) {
-        req.session.checker = new WhatsAppChecker({ delay, retries });
+// رفع ملف الأرقام
+app.post('/upload-numbers', requireAuth, upload.single('numbersFile'), (req, res) => {
+    if (!req.file) {
+        return res.json({ success: false, message: 'لم يتم اختيار ملف' });
     }
+    req.session.numbersFile = req.file.path;
+    res.json({ success: true, message: 'تم رفع ملف الأرقام بنجاح' });
+});
+
+// رفع ملف البروكسيات
+app.post('/upload-proxies', requireAuth, upload.single('proxiesFile'), (req, res) => {
+    if (!req.file) {
+        return res.json({ success: false, message: 'لم يتم اختيار ملف' });
+    }
+    req.session.proxiesFile = req.file.path;
+    res.json({ success: true, message: 'تم رفع ملف البروكسيات بنجاح' });
+});
+
+app.post('/check', requireAuth, async (req, res) => {
+    const { delay, retries } = req.body;
+    const userId = req.session.userId;
     
-    const checker = req.session.checker;
-    
+    if (!req.session.numbersFile || !req.session.proxiesFile) {
+        return res.json({ success: false, message: 'يرجى رفع ملف الأرقام وملف البروكسيات أولاً' });
+    }
+
     try {
-        checker.setNumbers(numbers.split('\n'));
-        checker.setProxies(proxies.split('\n'));
-        
+        const checker = new WhatsAppChecker(userId, { delay, retries });
+        userCheckers.set(userId, checker);
+
+        const filesLoaded = await checker.loadFiles(req.session.numbersFile, req.session.proxiesFile);
+        if (!filesLoaded) {
+            return res.json({ success: false, message: 'خطأ في تحميل الملفات' });
+        }
+
         if (checker.numbers.length === 0) {
             return res.json({ success: false, message: 'لم يتم العثور على أرقام صالحة' });
         }
-        
+
         res.json({ 
             success: true, 
             message: `بدأ التحقق من ${checker.numbers.length} رقم` 
         });
         
         // بدء التحقق في الخلفية
-        checker.startChecking(
-            (progress) => {
-                // سيتم إرسال التحديثات عبر polling
-            },
-            (results) => {
-                // حفظ النتائج في الجلسة
-                req.session.results = results;
-            }
-        );
+        checker.startChecking().then(() => {
+            console.log(`User ${userId} completed checking`);
+        }).catch(error => {
+            console.error(`User ${userId} error:`, error);
+        });
         
     } catch (error) {
         res.json({ success: false, message: error.message });
@@ -328,22 +412,27 @@ app.post('/check', requireAuth, async (req, res) => {
 });
 
 app.get('/results', requireAuth, (req, res) => {
-    if (!req.session.checker || !req.session.checker.results || req.session.checker.results.length === 0) {
+    const userId = req.session.userId;
+    const checker = userCheckers.get(userId);
+    
+    if (!checker || !checker.results || checker.results.length === 0) {
         return res.status(404).json({ error: 'لا توجد نتائج متاحة' });
     }
     
-    const csv = req.session.checker.getResultsCSV();
+    const csv = checker.getResultsCSV();
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=results.csv');
     res.send(csv);
 });
 
 app.get('/progress', requireAuth, (req, res) => {
-    if (!req.session.checker) {
+    const userId = req.session.userId;
+    const checker = userCheckers.get(userId);
+    
+    if (!checker) {
         return res.json({ running: false });
     }
     
-    const checker = req.session.checker;
     res.json({
         running: checker.isRunning,
         stats: checker.stats,
@@ -352,10 +441,15 @@ app.get('/progress', requireAuth, (req, res) => {
 });
 
 app.post('/stop', requireAuth, (req, res) => {
-    if (req.session.checker) {
-        req.session.checker.stopChecking();
+    const userId = req.session.userId;
+    const checker = userCheckers.get(userId);
+    
+    if (checker) {
+        checker.stopChecking();
+        res.json({ success: true, message: 'تم إيقاف عملية التحقق' });
+    } else {
+        res.json({ success: false, message: 'لا توجد عملية تحقق قيد التشغيل' });
     }
-    res.json({ success: true });
 });
 
 // مسار الصحة للخادم
@@ -363,9 +457,12 @@ app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 WaChecker By Anadom V 0.1 running on port ${PORT}`);
-    console.log(`🔐 Password: ${PASSWORD}`);
-    console.log(`👥 Max users: ${MAX_USERS}`);
-    console.log(`💝 Support: TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y (USDT TRC20)`);
-});
+// التأكد من وجود المجلدات الضرورية
+ensureUploadsDir().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 WaChecker By Anadom V 0.1 running on port ${PORT}`);
+        console.log(`🔐 Password: ${PASSWORD}`);
+        console.log(`👥 Max users: ${MAX_USERS}`);
+        console.log(`💝 Support: TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y (USDT TRC20)`);
+    });
+}).catch(console.error);
