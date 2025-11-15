@@ -1,473 +1,373 @@
-import express from 'express';
-import session from 'express-session';
-import multer from 'multer';
-import { spawn } from 'child_process';
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import axios from 'axios';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import rateLimit from 'express-rate-limit';
-
-// Fix for https-proxy-agent ESM import
-import HttpsProxyAgentPkg from 'https-proxy-agent';
-const { HttpsProxyAgent } = HttpsProxyAgentPkg;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+const path = require('path');
+const fs = require('fs').promises;
+const axios = require('axios');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      connectSrc: ["'self'", "ws:", "wss:"]
-    }
-  }
-}));
-app.use(compression());
-app.use(cors());
-app.use(express.json());
-app.use(express.static('public'));
-
-// Session Configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'anadom-secure-session-key-3301',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 1000 // 1 hour
-  }
-}));
-
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
 // Configuration
-const CONFIG = {
-  PASSWORD: process.env.PASSWORD || 'AnaDom3301',
-  MAX_SESSIONS: parseInt(process.env.MAX_SESSIONS) || 10,
-  SESSION_TIME: 60 * 60 * 1000, // 1 hour
-  ACTIVE_SESSIONS: new Map()
-};
+const PORT = process.env.PORT || 3000;
+const LOGIN_PASSWORD = "AnaDom3301";
+const MAX_USERS = 10;
+const SESSION_DURATION = 60 * 60 * 1000; // 1 hour
 
-// WhatsApp Checker Class (Enhanced)
-class WhatsAppChecker {
-  constructor(options = {}) {
-    this.options = {
-      delay: parseInt(options.delay) || 1000,
-      maxRetries: parseInt(options.retries) || 3,
-      ...options
-    };
-    
-    this.numbers = [];
-    this.proxies = [];
-    this.currentProxyIndex = 0;
-    this.results = [];
-    this.isRunning = false;
-    this.stats = {
-      checked: 0,
-      withWhatsApp: 0,
-      withoutWhatsApp: 0,
-      errors: 0,
-      total: 0
-    };
-  }
+// In-memory storage
+const activeSessions = new Map();
+const activeUsers = new Set();
+const userCheckers = new Map();
 
-  async loadFiles(numbersFile, proxiesFile) {
-    try {
-      // Load phone numbers
-      const numbersContent = await fs.readFile(numbersFile, 'utf8');
-      this.numbers = numbersContent
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line && !line.startsWith('#'))
-        .filter(line => /^\d+$/.test(line));
-      
-      // Load proxies
-      const proxiesContent = await fs.readFile(proxiesFile, 'utf8');
-      this.proxies = proxiesContent
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line && !line.startsWith('#'))
-        .filter(line => line.includes(':') || line.startsWith('http'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static('.'));
 
-      this.stats.total = this.numbers.length;
-      return true;
-    } catch (error) {
-      throw new Error(`Error loading files: ${error.message}`);
+// Session middleware
+function requireAuth(req, res, next) {
+    const token = req.headers.authorization;
+    if (!token || !activeSessions.has(token)) {
+        return res.status(401).json({ error: "انتهت الجلسة الخاصة بك" });
     }
-  }
-
-  getNextProxy() {
-    if (this.proxies.length === 0) return null;
-    const proxy = this.proxies[this.currentProxyIndex];
-    this.currentProxyIndex = (this.currentProxyIndex + 1) % this.proxies.length;
-    return proxy;
-  }
-
-  createAxiosInstance(proxy) {
-    const config = {
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8'
-      }
-    };
-
-    if (proxy) {
-      try {
-        let proxyUrl = proxy.startsWith('http') ? proxy : `http://${proxy}`;
-        config.httpsAgent = new HttpsProxyAgent(proxyUrl);
-        config.proxy = false;
-      } catch (error) {
-        console.log('Invalid proxy format:', proxy);
-      }
-    }
-
-    return axios.create(config);
-  }
-
-  async checkNumber(phoneNumber, retryCount = 0) {
-    const proxy = this.getNextProxy();
-    
-    try {
-      const axiosInstance = this.createAxiosInstance(proxy);
-      const url = `https://umnico.com/api/tools/checker?phone=${phoneNumber}`;
-      
-      const response = await axiosInstance.get(url);
-      
-      if (response.data && typeof response.data.exists === 'boolean') {
-        return {
-          success: true,
-          phone: phoneNumber,
-          exists: response.data.exists,
-          proxy: proxy || 'direct',
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (error) {
-      if (retryCount < this.options.maxRetries) {
-        await this.delay(500);
-        return this.checkNumber(phoneNumber, retryCount + 1);
-      }
-      
-      return {
-        success: false,
-        phone: phoneNumber,
-        error: error.message,
-        proxy: proxy || 'direct',
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  async delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async startChecking(onProgress, onComplete) {
-    this.isRunning = true;
-    
-    for (const number of this.numbers) {
-      if (!this.isRunning) break;
-
-      const result = await this.checkNumber(number);
-      this.results.push(result);
-      
-      if (result.success) {
-        if (result.exists) {
-          this.stats.withWhatsApp++;
-        } else {
-          this.stats.withoutWhatsApp++;
-        }
-      } else {
-        this.stats.errors++;
-      }
-
-      this.stats.checked++;
-      
-      if (onProgress) {
-        onProgress({
-          ...this.stats,
-          currentNumber: number,
-          result: result,
-          progress: (this.stats.checked / this.stats.total) * 100
-        });
-      }
-      
-      if (this.stats.checked < this.numbers.length) {
-        await this.delay(this.options.delay);
-      }
-    }
-
-    this.isRunning = false;
-    if (onComplete) {
-      onComplete(this.results);
-    }
-  }
-
-  stopChecking() {
-    this.isRunning = false;
-  }
-
-  getResults() {
-    return {
-      stats: this.stats,
-      results: this.results,
-      isRunning: this.isRunning
-    };
-  }
+    req.session = activeSessions.get(token);
+    next();
 }
 
-// File upload configuration
-const upload = multer({
-  dest: 'uploads/',
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
-  }
-});
-
-// Authentication middleware
-const requireAuth = (req, res, next) => {
-  if (req.session.authenticated) {
-    const sessionData = CONFIG.ACTIVE_SESSIONS.get(req.session.id);
-    if (sessionData && (Date.now() - sessionData.loginTime) < CONFIG.SESSION_TIME) {
-      return next();
-    } else {
-      req.session.authenticated = false;
-      CONFIG.ACTIVE_SESSIONS.delete(req.session.id);
-    }
-  }
-  res.redirect('/');
-};
-
-// Session management
-const manageSessions = (req) => {
-  // Clean expired sessions
-  const now = Date.now();
-  for (const [sessionId, data] of CONFIG.ACTIVE_SESSIONS.entries()) {
-    if (now - data.loginTime > CONFIG.SESSION_TIME) {
-      CONFIG.ACTIVE_SESSIONS.delete(sessionId);
-    }
-  }
-
-  // Check if server is full
-  if (CONFIG.ACTIVE_SESSIONS.size >= CONFIG.MAX_SESSIONS && !CONFIG.ACTIVE_SESSIONS.has(req.session.id)) {
-    throw new Error('SERVER_FULL');
-  }
-};
-
 // Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
 app.post('/api/login', (req, res) => {
-  try {
-    manageSessions(req);
-    
     const { password } = req.body;
     
-    if (password === CONFIG.PASSWORD) {
-      req.session.authenticated = true;
-      req.session.loginTime = Date.now();
-      
-      CONFIG.ACTIVE_SESSIONS.set(req.session.id, {
-        loginTime: req.session.loginTime,
-        userAgent: req.get('User-Agent')
-      });
-      
-      res.json({ success: true, message: 'Login successful' });
-    } else {
-      res.status(401).json({ success: false, message: 'Invalid password' });
-    }
-  } catch (error) {
-    if (error.message === 'SERVER_FULL') {
-      res.status(429).json({ 
-        success: false, 
-        message: 'السرفر مكتمل حاليًا. الرجاء الانتظار ساعة أو شراء نسخة خاصة.',
-        contact: 'https://wa.me/19177281677'
-      });
-    } else {
-      res.status(500).json({ success: false, message: 'Server error' });
-    }
-  }
-});
-
-app.get('/dashboard', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.post('/api/upload/numbers', requireAuth, upload.single('numbers'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    if (password !== LOGIN_PASSWORD) {
+        return res.status(401).json({ error: "كلمة المرور غير صحيحة" });
     }
     
-    const content = await fs.readFile(req.file.path, 'utf8');
-    await fs.writeFile('NumberList.TXT', content);
-    await fs.unlink(req.file.path);
-    
-    res.json({ success: true, message: 'Numbers file uploaded successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/upload/proxies', requireAuth, upload.single('proxies'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    if (activeUsers.size >= MAX_USERS) {
+        return res.status(403).json({ 
+            error: "السيرفر مكتمل الآن. يرجى الانتظار ساعة، أو شراء نسخة خاصة بك.",
+            contact: "https://wa.me/19177281677"
+        });
     }
     
-    const content = await fs.readFile(req.file.path, 'utf8');
-    await fs.writeFile('Proxy.txt', content);
-    await fs.unlink(req.file.path);
+    const token = Math.random().toString(36).substring(2);
+    const session = {
+        token,
+        userId: token,
+        expires: Date.now() + SESSION_DURATION
+    };
     
-    res.json({ success: true, message: 'Proxies file uploaded successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+    activeSessions.set(token, session);
+    activeUsers.add(token);
+    
+    // Cleanup session after duration
+    setTimeout(() => {
+        activeSessions.delete(token);
+        activeUsers.delete(token);
+        if (userCheckers.has(token)) {
+            userCheckers.delete(token);
+        }
+    }, SESSION_DURATION);
+    
+    res.json({ token, expires: session.expires });
 });
 
-app.post('/api/check/start', requireAuth, async (req, res) => {
-  try {
-    const checker = new WhatsAppChecker(req.body);
-    
-    // Check if files exist
+app.post('/api/upload', requireAuth, async (req, res) => {
     try {
-      await fs.access('NumberList.TXT');
-      await fs.access('Proxy.txt');
+        const { numbers, proxies } = req.body;
+        
+        if (!numbers) {
+            return res.status(400).json({ error: "يرجى تقديم ملف الأرقام" });
+        }
+        
+        const numbersArray = numbers.split('\n')
+            .map(line => line.trim())
+            .filter(line => line && !line.startsWith('#'))
+            .filter(line => /^\d+$/.test(line));
+            
+        let proxiesArray = [];
+        if (proxies) {
+            proxiesArray = proxies.split('\n')
+                .map(line => line.trim())
+                .filter(line => line && !line.startsWith('#'))
+                .filter(line => line.includes(':') || line.startsWith('http'));
+        }
+        
+        userCheckers.set(req.session.token, {
+            numbers: numbersArray,
+            proxies: proxiesArray,
+            progress: 0,
+            stats: { checked: 0, withWhatsApp: 0, withoutWhatsApp: 0, errors: 0 },
+            results: []
+        });
+        
+        res.json({ 
+            numbers: numbersArray.length, 
+            proxies: proxiesArray.length,
+            message: `تم تحميل ${numbersArray.length} رقم و ${proxiesArray.length} بروكسي`
+        });
+        
     } catch (error) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please upload both numbers and proxies files first' 
-      });
+        res.status(500).json({ error: "خطأ في تحميل الملفات" });
+    }
+});
+
+app.post('/api/start', requireAuth, async (req, res) => {
+    const session = req.session;
+    const checker = userCheckers.get(session.token);
+    
+    if (!checker || checker.numbers.length === 0) {
+        return res.status(400).json({ error: "يرجى تحميل ملف الأرقام أولاً" });
     }
     
-    await checker.loadFiles('NumberList.TXT', 'Proxy.txt');
+    // Start checking in background
+    startWhatsAppCheck(session.token, checker);
     
-    if (checker.numbers.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No valid phone numbers found' 
-      });
+    res.json({ message: "بدأ عملية الفحص", total: checker.numbers.length });
+});
+
+app.get('/api/status', requireAuth, (req, res) => {
+    const checker = userCheckers.get(req.session.token);
+    if (!checker) {
+        return res.json({ status: 'not_started' });
     }
     
-    res.json({ 
-      success: true, 
-      message: 'Check started',
-      total: checker.stats.total 
+    res.json({
+        progress: checker.progress,
+        stats: checker.stats,
+        total: checker.numbers.length
     });
+});
+
+// WebSocket handling
+wss.on('connection', (ws, req) => {
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            if (data.type === 'auth') {
+                ws.token = data.token;
+            }
+        } catch (error) {
+            console.log('WebSocket message error:', error);
+        }
+    });
+});
+
+// WhatsApp Checker Class (Modified from CLI)
+class WhatsAppChecker {
+    constructor(options = {}) {
+        this.options = {
+            delay: parseInt(options.delay) || 1000,
+            maxRetries: parseInt(options.retries) || 3,
+            ...options
+        };
+        
+        this.numbers = [];
+        this.proxies = [];
+        this.currentProxyIndex = 0;
+        this.results = [];
+        this.stats = {
+            checked: 0,
+            withWhatsApp: 0,
+            withoutWhatsApp: 0,
+            errors: 0
+        };
+        this.onProgress = () => {};
+        this.onFinish = () => {};
+    }
+
+    setNumbers(numbers) {
+        this.numbers = numbers;
+    }
+
+    setProxies(proxies) {
+        this.proxies = proxies;
+    }
+
+    getNextProxy() {
+        if (this.proxies.length === 0) return null;
+        const proxy = this.proxies[this.currentProxyIndex];
+        this.currentProxyIndex = (this.currentProxyIndex + 1) % this.proxies.length;
+        return proxy;
+    }
+
+    createAxiosInstance(proxy) {
+        const config = {
+            timeout: 30000,
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Encoding': 'gzip, deflate, br, zstd',
+                'Accept-Language': 'en-US,en;q=0.9,ar;q=0.8',
+                'Priority': 'u=1, i',
+                'Referer': 'https://umnico.com/tools/whatsapp-checker/',
+                'Sec-Ch-Ua': '"Google Chrome";v="141", "Not?A_Brand";v="8", "Chromium";v="141"',
+                'Sec-Ch-Ua-Mobile': '?0',
+                'Sec-Ch-Ua-Platform': '"Windows"',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+            }
+        };
+
+        if (proxy) {
+            try {
+                let proxyUrl = proxy;
+                if (!proxy.startsWith('http')) {
+                    proxyUrl = `http://${proxy}`;
+                }
+                config.httpsAgent = new HttpsProxyAgent(proxyUrl);
+                config.proxy = false;
+            } catch (error) {
+                console.log('Invalid proxy format:', proxy);
+            }
+        }
+
+        return axios.create(config);
+    }
+
+    async checkNumber(phoneNumber, retryCount = 0) {
+        const proxy = this.getNextProxy();
+        
+        try {
+            const axiosInstance = this.createAxiosInstance(proxy);
+            const url = `https://umnico.com/api/tools/checker?phone=${phoneNumber}`;
+            
+            const response = await axiosInstance.get(url);
+            
+            if (response.data && typeof response.data.exists === 'boolean') {
+                return {
+                    success: true,
+                    phone: phoneNumber,
+                    exists: response.data.exists,
+                    proxy: proxy || 'direct'
+                };
+            } else {
+                throw new Error('Invalid response format');
+            }
+        } catch (error) {
+            if (retryCount < this.options.maxRetries) {
+                await this.delay(500);
+                return this.checkNumber(phoneNumber, retryCount + 1);
+            }
+            
+            return {
+                success: false,
+                phone: phoneNumber,
+                error: error.message,
+                proxy: proxy || 'direct'
+            };
+        }
+    }
+
+    async delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async startChecking() {
+        for (const number of this.numbers) {
+            try {
+                const result = await this.checkNumber(number);
+                this.results.push(result);
+                
+                if (result.success) {
+                    if (result.exists) {
+                        this.stats.withWhatsApp++;
+                    } else {
+                        this.stats.withoutWhatsApp++;
+                    }
+                } else {
+                    this.stats.errors++;
+                }
+
+                this.stats.checked++;
+                
+                // Calculate progress percentage
+                const progress = (this.stats.checked / this.numbers.length) * 100;
+                
+                // Send progress update
+                this.onProgress({
+                    progress: Math.round(progress),
+                    stats: { ...this.stats },
+                    currentNumber: number,
+                    result: result
+                });
+                
+                // Delay between requests
+                if (this.stats.checked < this.numbers.length) {
+                    await this.delay(this.options.delay);
+                }
+                
+            } catch (error) {
+                this.stats.errors++;
+                this.results.push({
+                    success: false,
+                    phone: number,
+                    error: error.message
+                });
+                this.stats.checked++;
+            }
+        }
+
+        this.onFinish(this.results);
+    }
+}
+
+// Background checking function
+async function startWhatsAppCheck(userToken, userData) {
+    const checker = new WhatsAppChecker({ delay: 1000, retries: 3 });
+    checker.setNumbers(userData.numbers);
+    checker.setProxies(userData.proxies);
     
-    // Store checker instance in session
-    req.session.checker = {
-      stats: checker.stats,
-      isRunning: true,
-      startTime: new Date().toISOString()
+    checker.onProgress = (data) => {
+        // Update user data
+        userData.progress = data.progress;
+        userData.stats = data.stats;
+        userData.results.push(data.result);
+        
+        // Send via WebSocket
+        wss.clients.forEach(client => {
+            if (client.token === userToken && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'progress_update',
+                    data: data
+                }));
+            }
+        });
     };
     
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-app.post('/api/check/stop', requireAuth, (req, res) => {
-  try {
-    req.session.checker = {
-      ...req.session.checker,
-      isRunning: false
+    checker.onFinish = (results) => {
+        userData.progress = 100;
+        userData.results = results;
+        
+        // Send finish event
+        wss.clients.forEach(client => {
+            if (client.token === userToken && client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    type: 'finish',
+                    data: {
+                        stats: userData.stats,
+                        results: results
+                    }
+                }));
+            }
+        });
     };
-    res.json({ success: true, message: 'Check stopped' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    
+    await checker.startChecking();
+}
 
-app.get('/api/session-info', requireAuth, (req, res) => {
-  const sessionData = CONFIG.ACTIVE_SESSIONS.get(req.session.id);
-  const remainingTime = sessionData ? 
-    CONFIG.SESSION_TIME - (Date.now() - sessionData.loginTime) : 0;
-  
-  res.json({
-    activeSessions: CONFIG.ACTIVE_SESSIONS.size,
-    maxSessions: CONFIG.MAX_SESSIONS,
-    remainingTime: Math.max(0, remainingTime),
-    loginTime: sessionData?.loginTime
-  });
-});
+// Cleanup expired sessions every minute
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, session] of activeSessions.entries()) {
+        if (now > session.expires) {
+            activeSessions.delete(token);
+            activeUsers.delete(token);
+            userCheckers.delete(token);
+        }
+    }
+}, 60000);
 
-app.get('/api/check/progress', requireAuth, (req, res) => {
-  const progress = req.session.checker || {
-    stats: {
-      checked: 0,
-      withWhatsApp: 0,
-      withoutWhatsApp: 0,
-      errors: 0,
-      total: 0
-    },
-    isRunning: false
-  };
-  
-  res.json(progress);
-});
-
-app.get('/api/export/txt', requireAuth, (req, res) => {
-  const exportData = `
-حساب الواتساب الرسمي: https://wa.me/19177281677
-رابط التلغرام: https://t.me/MrAnadom
-عنوان USDT TRC20: TNpHDf3Pg52UryZC154r3rFYRTVCx1N25y
-
-طريقة طلب كلمة السر:
-للحصول على كلمة السر:
-أرسل كلمة "PassWord" إلى:
-https://wa.me/19177281677
-
-روابط الدعم:
-WhatsApp: https://wa.me/19177281677
-Telegram: https://t.me/MrAnadom
-  `.trim();
-  
-  res.setHeader('Content-Type', 'text/plain');
-  res.setHeader('Content-Disposition', 'attachment; filename="AnaDom-INFO.txt"');
-  res.send(exportData);
-});
-
-app.post('/api/logout', requireAuth, (req, res) => {
-  CONFIG.ACTIVE_SESSIONS.delete(req.session.id);
-  req.session.destroy();
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-// Create uploads directory if it doesn't exist
-const init = async () => {
-  try {
-    await fs.mkdir('uploads', { recursive: true });
-    console.log('Uploads directory created');
-  } catch (error) {
-    console.log('Uploads directory already exists');
-  }
-};
-
-app.listen(PORT, () => {
-  init();
-  console.log(`🚀 AnaDom WhatsApp Checker UI running on port ${PORT}`);
-  console.log(`🔗 Access the application at: http://localhost:${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
