@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnaDom - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #ff2d75;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --dark: #0f172a;
+            --darker: #020617;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --card-bg: rgba(15, 23, 42, 0.6);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker), var(--dark));
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .background-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .neon-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .session-timer {
+            background: rgba(255, 45, 117, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-whatsapp { color: var(--success); }
+        .stat-no-whatsapp { color: var(--warning); }
+        .stat-errors { color: var(--accent); }
+        .stat-total { color: var(--primary); }
+
+        .upload-section {
+            margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(0, 242, 254, 0.05);
+        }
+
+        .upload-area.dragover {
+            border-color: var(--success);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--gray);
+        }
+
+        .control-buttons {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: var(--darker);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--accent), #ff6b9d);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, var(--success), #00cc6a);
+            color: var(--darker);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .content {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .terminal {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-success { color: var(--success); }
+        .log-error { color: var(--accent); }
+        .log-warning { color: var(--warning); }
+        .log-info { color: var(--primary); }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem;
+            text-align: right;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .results-table th {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-error {
+            background: rgba(255, 45, 117, 0.2);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .status-pending {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .support-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .support-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .support-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .popup-content {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .support-section {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-effects">
+        <div class="neon-grid"></div>
+    </div>
+
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">
+                <h1>AnaDom Dashboard</h1>
+            </div>
+            <div class="session-timer" id="sessionTimer">
+                ⏳ وقت الجلسة: <span id="timer">60:00</span>
+            </div>
+        </nav>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number stat-total" id="statTotal">0</div>
+                    <div>إجمالي الأرقام</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-whatsapp" id="statWhatsApp">0</div>
+                    <div>لديهم واتساب</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-no-whatsapp" id="statNoWhatsApp">0</div>
+                    <div>بدون واتساب</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number stat-errors" id="statErrors">0</div>
+                    <div>أخطاء</div>
+                </div>
+            </div>
+
+            <div class="upload-section">
+                <h3 style="margin-bottom: 1rem; color: var(--primary);">رفع الملفات</h3>
+                
+                <div class="upload-area" id="numbersUpload">
+                    <div class="upload-icon">📄</div>
+                    <div>NumberList.TXT</div>
+                    <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">
+                        اسحب الملف أو انقر للرفع
+                    </div>
+                </div>
+
+                <div class="upload-area" id="proxiesUpload">
+                    <div class="upload-icon">🔗</div>
+                    <div>Proxy.txt</div>
+                    <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">
+                        اسحب الملف أو انقر للرفع
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn btn-primary" id="startCheck">
+                    ▶ بدء الفحص
+                </button>
+                <button class="btn btn-danger" id="stopCheck" disabled>
+                    ⏹ إيقاف الفحص
+                </button>
+                <button class="btn btn-success" id="exportResults">
+                    💾 تصدير النتائج
+                </button>
+                <button class="btn" style="background: var(--gray); color: white;" id="logoutBtn">
+                    🚪 تسجيل الخروج
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Progress Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">مؤشر التقدم</h2>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span id="progressText">0%</span>
+                        <span id="progressStats">0/0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Logs -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">السجلات المباشرة</h2>
+                </div>
+                <div class="terminal" id="terminal">
+                    <div class="log-entry log-info">🚀 نظام AnaDom جاهز للفحص...</div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">النتائج</h2>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>الرقم</th>
+                                <th>الحالة</th>
+                                <th>البروكسي</th>
+                                <th>الوقت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTable">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: var(--gray);">
+                                    لا توجد نتائج حتى الآن
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Support Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">الدعم والاتصال</h2>
+                </div>
+                <div class="support-section">
+                    <div class="support-card" onclick="window.open('https://t.me/MrAnadom', '_blank')">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
+                        <div>Telegram</div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">@MrAnadom</div>
+                    </div>
+                    <div class="support-card" onclick="window.open('https://wa.me/19177281677', '_blank')">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💬</div>
+                        <div>WhatsApp</div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">+19177281677</div>
+                    </div>
+                    <div class="support-card" onclick="copyUSDT()">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
+                        <div>USDT TRC20</div>
+                        <div style="font-size: 0.8rem; color: var(--gray);" id="usdtAddress">TNpHDf3Pg52UryZC154r3rFYRTVCx1N25y</div>
+                    </div>
+                    <div class="support-card" onclick="exportInfoTxt()">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+                        <div>معلومات الدعم</div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">تحميل ملف المعلومات</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Completion Popup -->
+    <div class="popup" id="completionPopup">
+        <div class="popup-content">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+            <h2 style="margin-bottom: 1rem; color: var(--success);">تم اكتمال الفحص!</h2>
+            <p style="margin-bottom: 2rem; color: var(--gray);">
+                تم فحص جميع الأرقام بنجاح. يمكنك تصدير النتائج أو التواصل معنا للدعم.
+            </p>
+            <button class="btn btn-primary" onclick="window.open('https://t.me/MrAnadom', '_blank')">
+                📞 تواصل عبر التلغرام
+            </button>
+            <button class="btn" style="margin-top: 1rem; background: var(--gray); color: white;" 
+                    onclick="document.getElementById('completionPopup').style.display = 'none'">
+                إغلاق
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Session Timer
+        function startSessionTimer() {
+            let timeLeft = 60 * 60; // 60 minutes in seconds
+            const timerElement = document.getElementById('timer');
+            
+            const timer = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    alert('انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.');
+                    window.location.href = '/';
+                }
+                timeLeft--;
+            }, 1000);
+        }
+
+        // File Upload Handling
+        function setupFileUpload() {
+            const numbersUpload = document.getElementById('numbersUpload');
+            const proxiesUpload = document.getElementById('proxiesUpload');
+
+            [numbersUpload, proxiesUpload].forEach((area, index) => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.txt';
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+
+                area.addEventListener('click', () => fileInput.click());
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+                area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    if (e.dataTransfer.files.length) {
+                        handleFileUpload(e.dataTransfer.files[0], index === 0 ? 'numbers' : 'proxies');
+                    }
+                });
+
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length) {
+                        handleFileUpload(e.target.files[0], index === 0 ? 'numbers' : 'proxies');
+                    }
+                });
+            });
+        }
+
+        async function handleFileUpload(file, type) {
+            const formData = new FormData();
+            formData.append(type === 'numbers' ? 'numbers' : 'proxies', file);
+
+            try {
+                addLog(`📤 جاري رفع ملف ${file.name}...`, 'info');
+                const response = await fetch(`/api/upload/${type}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addLog(`✅ تم رفع ${file.name} بنجاح`, 'success');
+                } else {
+                    addLog(`❌ فشل في رفع الملف: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                addLog(`❌ خطأ في الاتصال: ${error.message}`, 'error');
+            }
+        }
+
+        // Log Management
+        function addLog(message, type = 'info') {
+            const terminal = document.getElementById('terminal');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            terminal.appendChild(logEntry);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Check Control
+        document.getElementById('startCheck').addEventListener('click', startChecking);
+        document.getElementById('stopCheck').addEventListener('click', stopChecking);
+        document.getElementById('exportResults').addEventListener('click', exportResults);
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+
+        let checkInProgress = false;
+
+        async function startChecking() {
+            if (checkInProgress) return;
+
+            try {
+                addLog('🚀 بدء فحص الأرقام...', 'info');
+                document.getElementById('startCheck').disabled = true;
+                document.getElementById('stopCheck').disabled = false;
+                checkInProgress = true;
+
+                const response = await fetch('/api/check/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        delay: 1000,
+                        retries: 3
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addLog(`✅ بدأ الفحص - ${data.total} رقم للفحص`, 'success');
+                    // Start polling for progress
+                    pollProgress();
+                } else {
+                    addLog(`❌ فشل بدء الفحص: ${data.message}`, 'error');
+                    resetCheckButtons();
+                }
+            } catch (error) {
+                addLog(`❌ خطأ في بدء الفحص: ${error.message}`, 'error');
+                resetCheckButtons();
+            }
+        }
+
+        async function stopChecking() {
+            try {
+                await fetch('/api/check/stop', { method: 'POST' });
+                addLog('⏹ تم إيقاف الفحص', 'warning');
+                resetCheckButtons();
+            } catch (error) {
+                addLog(`❌ خطأ في إيقاف الفحص: ${error.message}`, 'error');
+            }
+        }
+
+        function resetCheckButtons() {
+            document.getElementById('startCheck').disabled = false;
+            document.getElementById('stopCheck').disabled = true;
+            checkInProgress = false;
+        }
+
+        async function pollProgress() {
+            // This would be implemented with WebSockets or SSE in production
+            // For now, we'll simulate progress updates
+            addLog('📡 جاري الاتصال بالسيرفر للحصول على التحديثات...', 'info');
+        }
+
+        async function exportResults() {
+            try {
+                const response = await fetch('/api/export/txt');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'AnaDom-INFO.txt';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                addLog('✅ تم تصدير ملف المعلومات', 'success');
+            } catch (error) {
+                addLog(`❌ خطأ في التصدير: ${error.message}`, 'error');
+            }
+        }
+
+        function exportInfoTxt() {
+            exportResults();
+        }
+
+        function copyUSDT() {
+            const usdtAddress = 'TNpHDf3Pg52UryZC154r3rFYRTVCx1N25y';
+            navigator.clipboard.writeText(usdtAddress).then(() => {
+                addLog('✅ تم نسخ عنوان USDT', 'success');
+            });
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Initialize
+        startSessionTimer();
+        setupFileUpload();
+        addLog('✅ لوحة التحكم جاهزة للاستخدام', 'success');
+    </script>
+</body>
+</html>
