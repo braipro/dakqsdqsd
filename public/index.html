@@ -1,1 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaChecker By Anadom V 0.1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #3498db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .user-stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .input-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-section h3 i {
+            color: #3498db;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .option-group label {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .option-group input {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #219a52;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .progress-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .results {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .result-item.success {
+            border-left-color: #27ae60;
+        }
+
+        .result-item.error {
+            border-left-color: #e74c3c;
+        }
+
+        .support-section {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .support-address {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            word-break: break-all;
+        }
+
+        .logout-section {
+            text-align: center;
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="user-stats" id="userStats">
+                👥 المستخدمين: <span id="activeUsers">0</span>/10
+            </div>
+            <div class="logo">WA</div>
+            <h1>WaChecker By Anadom</h1>
+            <p>V 0.1 - أداة التحقق من أرقام الواتساب</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h3>📞 الأرقام المراد التحقق منها</h3>
+                <textarea id="numbersInput" placeholder="أدخل الأرقام (رقم في كل سطر)&#10;مثال:&#10;1234567890&#10;0987654321&#10;سيتم تنظيف الأرقام تلقائياً من المسافات والرموز"></textarea>
+                
+                <h3>🔗 بروكسيات التحقق</h3>
+                <textarea id="proxiesInput" placeholder="أدخل عناوين البروكسي (سطر لكل بروكسي)&#10;مثال:&#10;192.168.1.1:8080&#10;http://proxy.example.com:8080&#10;user:pass@proxy.com:3128"></textarea>
+
+                <div class="options">
+                    <div class="option-group">
+                        <label>⏱️ التأخير بين الطلبات (ميلي ثانية)</label>
+                        <input type="number" id="delayInput" value="1000" min="500">
+                    </div>
+                    <div class="option-group">
+                        <label>🔄 عدد المحاولات عند الفشل</label>
+                        <input type="number" id="retriesInput" value="3" min="1" max="10">
+                    </div>
+                </div>
+
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="startChecking()">▶ بدء التحقق</button>
+                    <button class="btn btn-danger" onclick="stopChecking()">⏹ إيقاف</button>
+                    <button class="btn btn-success" onclick="downloadResults()" id="downloadBtn" disabled>📥 تحميل النتائج</button>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <h3>📊 تقدم العملية</h3>
+                <div id="progressAlert"></div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div style="text-align: center; font-size: 14px; color: #7f8c8d;" id="progressText">0%</div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalNumbers">0</div>
+                        <div class="stat-label">إجمالي الأرقام</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="checkedNumbers">0</div>
+                        <div class="stat-label">تم التحقق</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="whatsappYes">0</div>
+                        <div class="stat-label">موجود في واتساب</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="whatsappNo">0</div>
+                        <div class="stat-label">غير موجود</div>
+                    </div>
+                </div>
+
+                <div class="results" id="resultsContainer">
+                    <!-- سيتم عرض النتائج هنا -->
+                </div>
+            </div>
+        </div>
+
+        <div class="support-section">
+            <h3>💝 الدعم والتبرع</h3>
+            <p>إذا وجدت هذه الأداة مفيدة، يمكنك دعم المطور لتطوير المزيد من الأدوات</p>
+            <div class="support-address" id="supportAddress">
+                TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
+            </div>
+            <p>USDT TRC20 - شكراً لدعمكم! ❤️</p>
+        </div>
+
+        <div class="logout-section">
+            <button class="btn btn-secondary" onclick="logout()">🚪 تسجيل الخروج</button>
+        </div>
+    </div>
+
+    <script>
+        let checkInterval;
+
+        // تحديث إحصائيات المستخدمين
+        async function updateUserStats() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                document.getElementById('activeUsers').textContent = data.activeUsers;
+            } catch (error) {
+                console.error('Error updating user stats:', error);
+            }
+        }
+
+        // بدء التحقق
+        async function startChecking() {
+            const numbers = document.getElementById('numbersInput').value;
+            const proxies = document.getElementById('proxiesInput').value;
+            const delay = document.getElementById('delayInput').value;
+            const retries = document.getElementById('retriesInput').value;
+
+            if (!numbers.trim()) {
+                showAlert('يرجى إدخال الأرقام المراد التحقق منها', 'error');
+                return;
+            }
+
+            showAlert('جاري بدء عملية التحقق...', 'warning');
+
+            try {
+                const response = await fetch('/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ numbers, proxies, delay, retries })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    startProgressMonitoring();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // مراقبة التقدم
+        function startProgressMonitoring() {
+            clearInterval(checkInterval);
+            checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/progress');
+                    const data = await response.json();
+                    
+                    updateProgress(data);
+                    
+                    if (!data.running) {
+                        clearInterval(checkInterval);
+                        document.getElementById('downloadBtn').disabled = false;
+                        showAlert('اكتملت عملية التحقق بنجاح!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Error checking progress:', error);
+                }
+            }, 1000);
+        }
+
+        // تحديث شريط التقدم
+        function updateProgress(data) {
+            if (data.running) {
+                const progress = (data.stats.checked / data.total) * 100;
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = progress.toFixed(1) + '%';
+                
+                document.getElementById('totalNumbers').textContent = data.total;
+                document.getElementById('checkedNumbers').textContent = data.stats.checked;
+                document.getElementById('whatsappYes').textContent = data.stats.withWhatsApp;
+                document.getElementById('whatsappNo').textContent = data.stats.withoutWhatsApp;
+            }
+        }
+
+        // إيقاف التحقق
+        async function stopChecking() {
+            try {
+                await fetch('/stop', { method: 'POST' });
+                showAlert('تم إيقاف عملية التحقق', 'warning');
+                clearInterval(checkInterval);
+            } catch (error) {
+                showAlert('خطأ في إيقاف العملية', 'error');
+            }
+        }
+
+        // تحميل النتائج
+        async function downloadResults() {
+            window.open('/results', '_blank');
+        }
+
+        // تسجيل الخروج
+        async function logout() {
+            try {
+                await fetch('/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+
+        // عرض التنبيهات
+        function showAlert(message, type) {
+            const alertDiv = document.getElementById('progressAlert');
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                alertDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // نسخ عنوان الدعم
+        document.getElementById('supportAddress').addEventListener('click', function() {
+            const text = this.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('تم نسخ عنوان الدعم إلى الحافظة', 'success');
+            });
+        });
+
+        // تحديث الإحصائيات كل 30 ثانية
+        setInterval(updateUserStats, 30000);
+        updateUserStats();
+    </script>
+</body>
+</html>
