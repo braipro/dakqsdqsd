@@ -1,7 +1,7 @@
 {
   "name": "wachecker-by-anadom",
   "version": "0.1.0",
-  "description": "Web-based WhatsApp number checker with multi-user support",
+  "description": "Professional WhatsApp Number Checker",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -16,6 +16,6 @@
     "cookie-parser": "^1.4.6"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }
