@@ -6,11 +6,14 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import axios from 'axios';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+
+// Fix for https-proxy-agent ESM import
+import HttpsProxyAgentPkg from 'https-proxy-agent';
+const { HttpsProxyAgent } = HttpsProxyAgentPkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -374,19 +377,12 @@ app.post('/api/check/start', requireAuth, async (req, res) => {
       total: checker.stats.total 
     });
     
-    // Start checking in background
-    checker.startChecking(
-      (progress) => {
-        // Broadcast progress via WebSocket or store in session
-        req.session.checkProgress = progress;
-      },
-      (results) => {
-        req.session.checkResults = results;
-        req.session.lastCheckTime = new Date().toISOString();
-      }
-    );
-    
-    req.session.currentChecker = checker;
+    // Store checker instance in session
+    req.session.checker = {
+      stats: checker.stats,
+      isRunning: true,
+      startTime: new Date().toISOString()
+    };
     
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -395,12 +391,11 @@ app.post('/api/check/start', requireAuth, async (req, res) => {
 
 app.post('/api/check/stop', requireAuth, (req, res) => {
   try {
-    if (req.session.currentChecker) {
-      req.session.currentChecker.stopChecking();
-      res.json({ success: true, message: 'Check stopped' });
-    } else {
-      res.json({ success: true, message: 'No active check' });
-    }
+    req.session.checker = {
+      ...req.session.checker,
+      isRunning: false
+    };
+    res.json({ success: true, message: 'Check stopped' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -417,6 +412,21 @@ app.get('/api/session-info', requireAuth, (req, res) => {
     remainingTime: Math.max(0, remainingTime),
     loginTime: sessionData?.loginTime
   });
+});
+
+app.get('/api/check/progress', requireAuth, (req, res) => {
+  const progress = req.session.checker || {
+    stats: {
+      checked: 0,
+      withWhatsApp: 0,
+      withoutWhatsApp: 0,
+      errors: 0,
+      total: 0
+    },
+    isRunning: false
+  };
+  
+  res.json(progress);
 });
 
 app.get('/api/export/txt', requireAuth, (req, res) => {
