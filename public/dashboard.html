@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Checker Pro - Dashboard</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #f8fafc;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .user-stats {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        .user-count {
+            background: var(--secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .card-description {
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+
+        /* File Upload */
+        .file-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            text-align: center;
+            transition: var(--transition);
+            cursor: pointer;
+            background: var(--secondary);
+        }
+
+        .file-upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .file-upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--secondary);
+            border-radius: var(--radius);
+            text-align: left;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .file-count {
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        /* Progress Section */
+        .progress-section {
+            margin-top: 2rem;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 4px;
+            transition: var(--transition);
+            width: 0%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--secondary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+            border-left: 4px solid var(--primary);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--accent), #059669);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            margin: 1rem 0;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        /* Support Section */
+        .support-section {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--radius);
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .support-address {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-family: 'Monaco', 'Consolas', monospace;
+            margin: 1rem 0;
+            word-break: break-all;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .support-address:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.875rem;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-success { color: var(--accent); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">WA</div>
+                    <span>WhatsApp Checker Pro</span>
+                </div>
+                <div class="user-stats">
+                    <div class="user-count">
+                        👥 <span id="activeUsers">0</span>/10 Users Online
+                    </div>
+                    <button class="btn btn-outline" onclick="logout()">
+                        <span>🚪 Logout</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="dashboard-grid">
+                <!-- File Upload Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📁</div>
+                        <div>
+                            <h2 class="card-title">File Upload</h2>
+                            <p class="card-description">Upload your phone numbers and proxies lists</p>
+                        </div>
+                    </div>
+
+                    <!-- Numbers File Upload -->
+                    <div class="file-upload-area" id="numbersUploadArea">
+                        <div class="upload-icon">📞</div>
+                        <h3>Phone Numbers File</h3>
+                        <p>Upload a .txt file containing phone numbers (one per line)</p>
+                        <input type="file" id="numbersFile" accept=".txt" hidden>
+                        <div class="file-info" id="numbersInfo">
+                            <div class="file-name">No file selected</div>
+                            <div class="file-count">0 numbers</div>
+                        </div>
+                    </div>
+
+                    <!-- Proxies File Upload -->
+                    <div class="file-upload-area" id="proxiesUploadArea" style="margin-top: 1.5rem;">
+                        <div class="upload-icon">🔗</div>
+                        <h3>Proxies File (Optional)</h3>
+                        <p>Upload a .txt file containing proxies (one per line)</p>
+                        <input type="file" id="proxiesFile" accept=".txt" hidden>
+                        <div class="file-info" id="proxiesInfo">
+                            <div class="file-name">No file selected</div>
+                            <div class="file-count">0 proxies</div>
+                        </div>
+                    </div>
+
+                    <!-- Settings -->
+                    <div style="margin-top: 2rem;">
+                        <h4 style="margin-bottom: 1rem;">Settings</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Delay (ms)</label>
+                                <input type="number" id="delayInput" value="1000" min="500" 
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Max Retries</label>
+                                <input type="number" id="retriesInput" value="3" min="1" max="10"
+                                       style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius);">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <div>
+                            <h2 class="card-title">Checking Progress</h2>
+                            <p class="card-description">Monitor the WhatsApp number verification process</p>
+                        </div>
+                    </div>
+
+                    <div id="progressAlert"></div>
+
+                    <div class="progress-section">
+                        <div class="progress-header">
+                            <span>Progress</span>
+                            <span id="progressText">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number" id="totalNumbers">0</div>
+                                <div class="stat-label">Total Numbers</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number" id="checkedNumbers">0</div>
+                                <div class="stat-label">Checked</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number text-success" id="whatsappYes">0</div>
+                                <div class="stat-label">With WhatsApp</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number text-danger" id="whatsappNo">0</div>
+                                <div class="stat-label">Without WhatsApp</div>
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="startChecking()" id="startBtn">
+                                <span>▶ Start Checking</span>
+                            </button>
+                            <button class="btn btn-danger" onclick="stopChecking()" id="stopBtn" disabled>
+                                <span>⏹ Stop</span>
+                            </button>
+                            <button class="btn btn-success" onclick="downloadWhatsAppNumbers()" id="downloadWhatsAppBtn" disabled>
+                                <span>📥 WhatsApp Numbers</span>
+                            </button>
+                            <button class="btn btn-outline" onclick="downloadFullResults()" id="downloadFullBtn" disabled>
+                                <span>📊 Full Report</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Support Section -->
+            <div class="support-section">
+                <h3>💝 Support the Development</h3>
+                <p>If you find this tool helpful, consider supporting the developer for more amazing tools</p>
+                <div class="support-address" id="supportAddress">
+                    TNpHDf3Pg52UryZC154r3rFYRTvCx1N25y
+                </div>
+                <p>USDT TRC20 - Thank you for your support! ❤️</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div>WhatsApp Checker Pro v0.1 • Built with ❤️ by Anadom</div>
+        </footer>
+    </div>
+
+    <script>
+        class WhatsAppCheckerApp {
+            constructor() {
+                this.checkInterval = null;
+                this.initializeEventListeners();
+                this.updateUserStats();
+                setInterval(() => this.updateUserStats(), 30000);
+            }
+
+            initializeEventListeners() {
+                // File upload handlers
+                this.setupFileUpload('numbersFile', 'numbersUploadArea', 'numbersInfo', '/api/upload/numbers');
+                this.setupFileUpload('proxiesFile', 'proxiesUploadArea', 'proxiesInfo', '/api/upload/proxies');
+            }
+
+            setupFileUpload(inputId, areaId, infoId, endpoint) {
+                const input = document.getElementById(inputId);
+                const area = document.getElementById(areaId);
+                const info = document.getElementById(infoId);
+
+                area.addEventListener('click', () => input.click());
+                area.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    area.classList.add('dragover');
+                });
+                area.addEventListener('dragleave', () => area.classList.remove('dragover'));
+                area.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    area.classList.remove('dragover');
+                    if (e.dataTransfer.files.length) {
+                        input.files = e.dataTransfer.files;
+                        this.handleFileUpload(input, info, endpoint);
+                    }
+                });
+
+                input.addEventListener('change', () => this.handleFileUpload(input, info, endpoint));
+            }
+
+            async handleFileUpload(input, info, endpoint) {
+                const file = input.files[0];
+                if (!file) return;
+
+                const originalText = info.innerHTML;
+                info.innerHTML = '<div class="file-name">Uploading...</div>';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        info.innerHTML = `
+                            <div class="file-name">✓ ${file.name}</div>
+                            <div class="file-count">${data.count || 'Unknown'} items</div>
+                        `;
+                        this.showAlert(data.message, 'success');
+                    } else {
+                        info.innerHTML = originalText;
+                        this.showAlert(data.message, 'error');
+                        input.value = '';
+                    }
+                } catch (error) {
+                    info.innerHTML = originalText;
+                    this.showAlert('Upload failed: ' + error.message, 'error');
+                    input.value = '';
+                }
+            }
+
+            async startChecking() {
+                const delay = document.getElementById('delayInput').value;
+                const retries = document.getElementById('retriesInput').value;
+
+                // Update UI
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('startBtn').innerHTML = '<span class="loading"></span> Starting...';
+
+                try {
+                    const response = await fetch('/api/check/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ delay, retries })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showAlert(data.message, 'success');
+                        this.startProgressMonitoring();
+                    } else {
+                        this.showAlert(data.message, 'error');
+                        this.resetButtons();
+                    }
+                } catch (error) {
+                    this.showAlert('Failed to start checking: ' + error.message, 'error');
+                    this.resetButtons();
+                }
+            }
+
+            startProgressMonitoring() {
+                clearInterval(this.checkInterval);
+                this.checkInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch('/api/check/progress');
+                        const data = await response.json();
+                        
+                        this.updateProgress(data);
+                        
+                        if (!data.running) {
+                            clearInterval(this.checkInterval);
+                            this.onCheckingComplete();
+                        }
+                    } catch (error) {
+                        console.error('Progress check failed:', error);
+                    }
+                }, 2000);
+            }
+
+            updateProgress(data) {
+                const progress = data.progress || 0;
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressText').textContent = progress.toFixed(1) + '%';
+                
+                document.getElementById('totalNumbers').textContent = data.total || 0;
+                document.getElementById('checkedNumbers').textContent = data.stats.checked || 0;
+                document.getElementById('whatsappYes').textContent = data.stats.withWhatsApp || 0;
+                document.getElementById('whatsappNo').textContent = data.stats.withoutWhatsApp || 0;
+            }
+
+            onCheckingComplete() {
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('downloadWhatsAppBtn').disabled = false;
+                document.getElementById('downloadFullBtn').disabled = false;
+                document.getElementById('startBtn').innerHTML = '<span>▶ Start Checking</span>';
+                
+                this.showAlert('Checking completed successfully!', 'success');
+            }
+
+            async stopChecking() {
+                try {
+                    const response = await fetch('/api/check/stop', { method: 'POST' });
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showAlert(data.message, 'warning');
+                        clearInterval(this.checkInterval);
+                        this.resetButtons();
+                    } else {
+                        this.showAlert(data.message, 'error');
+                    }
+                } catch (error) {
+                    this.showAlert('Failed to stop checking: ' + error.message, 'error');
+                }
+            }
+
+            resetButtons() {
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('startBtn').innerHTML = '<span>▶ Start Checking</span>';
+            }
+
+            async downloadWhatsAppNumbers() {
+                window.open('/api/download/whatsapp-numbers', '_blank');
+            }
+
+            async downloadFullResults() {
+                window.open('/api/download/full-results', '_blank');
+            }
+
+            async updateUserStats() {
+                try {
+                    const response = await fetch('/api/status');
+                    const data = await response.json();
+                    document.getElementById('activeUsers').textContent = data.activeUsers;
+                } catch (error) {
+                    console.error('Failed to update user stats:', error);
+                }
+            }
+
+            showAlert(message, type) {
+                const alertDiv = document.getElementById('progressAlert');
+                alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                
+                setTimeout(() => {
+                    alertDiv.innerHTML = '';
+                }, 5000);
+            }
+
+            async logout() {
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                    window.location.href = '/login';
+                } catch (error) {
+                    console.error('Logout failed:', error);
+                }
+            }
+        }
+
+        // Initialize app
+        const app = new WhatsAppCheckerApp();
+
+        // Global functions for HTML onclick
+        function startChecking() { app.startChecking(); }
+        function stopChecking() { app.stopChecking(); }
+        function downloadWhatsAppNumbers() { app.downloadWhatsAppNumbers(); }
+        function downloadFullResults() { app.downloadFullResults(); }
+        function logout() { app.logout(); }
+
+        // Support address copy
+        document.getElementById('supportAddress').addEventListener('click', function() {
+            navigator.clipboard.writeText(this.textContent).then(() => {
+                app.showAlert('Support address copied to clipboard!', 'success');
+            });
+        });
+    </script>
+</body>
+</html>
