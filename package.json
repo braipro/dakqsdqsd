@@ -14,8 +14,7 @@
     "axios": "^1.6.0",
     "https-proxy-agent": "^7.0.0",
     "body-parser": "^1.20.2",
-    "cookie-parser": "^1.4.6",
-    "user-agents": "^1.0.1356"
+    "cookie-parser": "^1.4.6"
   },
   "engines": {
     "node": ">=18.0.0"
