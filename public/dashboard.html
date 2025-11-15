@@ -773,6 +773,61 @@
                 app.showAlert('Support address copied to clipboard!', 'success');
             });
         });
+                // تحسين معالجة الأخطاء في رفع الملفات
+        async handleFileUpload(input, info, endpoint) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const originalText = info.innerHTML;
+            info.innerHTML = '<div class="file-name">جاري الرفع...</div><div class="file-count">يرجى الانتظار</div>';
+
+            const formData = new FormData();
+            formData.append(input.id === 'numbersFile' ? 'numbersFile' : 'proxiesFile', file);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // تحقق إذا كان الرد JSON صالح
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('الخادم لم يرجع استجابة صحيحة. قد تكون هناك مشكلة في المصادقة.');
+                }
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'فشل في رفع الملف');
+                }
+
+                if (data.success) {
+                    info.innerHTML = `
+                        <div class="file-name">✓ ${file.name}</div>
+                        <div class="file-count">${data.count || '0'} عنصر</div>
+                    `;
+                    this.showAlert(data.message, 'success');
+                } else {
+                    info.innerHTML = originalText;
+                    this.showAlert(data.message, 'error');
+                    input.value = '';
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                info.innerHTML = originalText;
+                
+                if (error.message.includes('المصادقة')) {
+                    this.showAlert('انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.', 'error');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    this.showAlert('فشل الرفع: ' + error.message, 'error');
+                }
+                input.value = '';
+            }
+        }
     </script>
 </body>
 </html>
